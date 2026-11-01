@@ -40,6 +40,8 @@ HOP_HEADERS = {"connection", "keep-alive", "proxy-authorization", "te", "trailer
 
 _SESSION = boto3.Session()  # one credential provider (execution role via MMDS), refreshed by botocore, not re-resolved per call
 INVOCATION_TIMEOUT_S = 25  # answer well within AgentCore's request timeout, whatever the agent does
+PIN_FALLBACK_S = 120.0  # after the first mount: release the pins even if no turn starts the CLI (a failed mount, a long clone)
+PIN_GRACE_S = 10.0  # after the agent reports the CLI started: its start-up reads have finished well within this
 
 
 def sigv4(method: str, url: str, data: bytes, headers: dict) -> dict:
@@ -58,8 +60,12 @@ def sigv4(method: str, url: str, data: bytes, headers: dict) -> dict:
 class S3FilesMounter:
     """Broker → root-only profile → `mount -t s3files` the ticket's AP at /mnt/work; rotate before the creds expire."""
 
-    def __init__(self, pinner: Pinner | None = None) -> None:
-        self.pinner = pinner  # holds the first mount's files in memory across the V2 snapshot; released after that mount
+    def __init__(self, pinner: Pinner | None = None, *, pin_fallback_s: float = PIN_FALLBACK_S, pin_grace_s: float = PIN_GRACE_S) -> None:
+        # Holds the first request's files (the mount's, then the first turn's CLI) in memory across the V2 snapshot.
+        self.pinner = pinner
+        self.pin_fallback_s, self.pin_grace_s = pin_fallback_s, pin_grace_s
+        self._pin_tasks: set[asyncio.Task] = set()
+        self._pin_fallback_armed = False
         self.lambda_client = boto3.client("lambda", region_name=REGION)
         self.function = os.environ.get("BROKER_FUNCTION", "dshsa-broker")
         self.latest_token: str | None = None
@@ -125,19 +131,46 @@ class S3FilesMounter:
             t1 = time.monotonic()
             await asyncio.get_running_loop().run_in_executor(None, self._mount, target["fileSystemId"], target["accessPointId"])
         finally:
-            await self.release_pin()
+            self._arm_pin_fallback()
         self.target = target
         log("mounted", ticketKey=target["ticketKey"], accessPointId=target["accessPointId"], mint_ms=int((t1 - t0) * 1000),
             mount_ms=int((time.monotonic() - t1) * 1000))
         asyncio.get_running_loop().create_task(self._refresh_loop())
         return target
 
-    async def release_pin(self) -> None:
-        """After the first mount, success or not: the pages it needed are read, the pins would only hold memory."""
-        pinner, self.pinner = self.pinner, None
-        if pinner:
+    # ---- pin release: the first turn's CLI has started (+ grace), or a fixed time after the first mount, whichever is first ----
+    def _later(self, delay_s: float, reason: str) -> None:
+        task = asyncio.get_running_loop().create_task(self._release_after(delay_s, reason))
+        self._pin_tasks.add(task)  # the loop keeps only weak references to tasks
+        task.add_done_callback(self._pin_tasks.discard)
+
+    def _arm_pin_fallback(self) -> None:
+        """After the first mount, success or not: if no turn starts the CLI, the pins would only hold memory."""
+        if self.pinner and not self._pin_fallback_armed:
+            self._pin_fallback_armed = True
+            self._later(self.pin_fallback_s, "fallback")
+
+    def cli_started(self) -> None:
+        """The gateway saw the agent's first turn start the Claude CLI: release once its start-up has read its pages."""
+        try:
+            if self.pinner:
+                self._later(self.pin_grace_s, "cli_started")
+        except Exception as error:  # noqa: BLE001 - best effort; the fallback still releases
+            log("pin_release_failed", level="WARNING", reason=f"{type(error).__name__}: {str(error)[:200]}")
+
+    async def _release_after(self, delay_s: float, reason: str) -> None:
+        await asyncio.sleep(delay_s)
+        await self.release_pin(reason)
+
+    async def release_pin(self, reason: str) -> None:
+        pinner, self.pinner = self.pinner, None  # first caller wins; later ones find nothing to release
+        if not pinner:
+            return
+        try:
             await asyncio.to_thread(pinner.release)  # kill + a bounded wait: off the event loop, so /ping never stalls on it
-            log("pin_released")
+            log("pin_released", reason=reason)
+        except Exception as error:  # noqa: BLE001 - best effort
+            log("pin_release_failed", level="WARNING", reason=f"{type(error).__name__}: {str(error)[:200]}")
 
     def _seconds_until_refresh(self) -> float:
         remaining = (self.expiration - datetime.now(UTC)).total_seconds() if self.expiration else 0
@@ -203,7 +236,8 @@ def build_app(pinner: Pinner | None = None) -> web.Application:
         session = aiohttp.ClientSession()
         agent = HttpAgent(session)
         owner = int(os.environ.get("AGENT_UID", "1000")) if MOUNT_MODE == "local" and os.getuid() == 0 else None
-        gw = Gateway(verifier=verifier(), mounter=S3FilesMounter(pinner), agent=agent, store=Store(WORK, owner=owner))
+        mounter = S3FilesMounter(pinner)
+        gw = Gateway(verifier=verifier(), mounter=mounter, agent=agent, store=Store(WORK, owner=owner), on_cli_started=mounter.cli_started)
         state.update(session=session, agent=agent, gw=gw)
         log("gateway_started", workerVersion=gw.version)
 
@@ -328,7 +362,7 @@ def start_pinner() -> Pinner | None:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     assert os.getuid() == 0 or MOUNT_MODE == "local", "gateway must run as root (mount + credential file)"
-    # V2 snapshots once /ping answers (and is expected to drop the page cache first): pin the first mount's files before the port opens.
+    # V2 snapshots once /ping answers (and is expected to drop the page cache first): pin the first request's files before the port opens.
     web.run_app(build_app(start_pinner()), host="0.0.0.0", port=8080, access_log=None)  # noqa: S104 - AgentCore contract port
 
 

@@ -91,6 +91,7 @@ class Worker:
         self.turn: TurnContext | None = None
         self.interrupt: Callable[[], Awaitable[None]] | None = None
         self.stopped = False
+        self.cli_started = False  # a turn of this process has had a message from the Claude CLI (reported on /status)
         self._task: asyncio.Task[None] | None = None
         # Work to do before the first turn of a run (repo preparation), off the control request: returns False to stop.
         self.prepare: Callable[[], Awaitable[bool]] | None = None
@@ -301,10 +302,17 @@ async def sdk_runner(worker: Worker, prompt: str) -> None:
         env={**env, "CLAUDE_CONFIG_DIR": worker.config_dir, "CLAUDE_CODE_USE_BEDROCK": "1"},
         **({"resume": session} if resume else {"session_id": session}),
     )
-    async with ClaudeSDKClient(options=options) as client:
+    started = monotonic()
+    async with ClaudeSDKClient(options=options) as client:  # connect spawns the CLI and waits for its initialize answer
+        connect_ms, answered = int((monotonic() - started) * 1000), False
         worker.interrupt = client.interrupt
         await client.query(prompt)
         async for message in client.receive_response():
+            if not answered:  # the CLI is up: cold reads of its ~300 MB binary after a snapshot restore land in `ms`
+                answered = True
+                print(json.dumps({"component": "agent", "event": "cli_started", "ms": int((monotonic() - started) * 1000), "connect_ms": connect_ms,
+                                  "first": not worker.cli_started}), flush=True)
+                worker.cli_started = True
             if isinstance(message, AssistantMessage):
                 text = "\n".join(block.text for block in message.content if isinstance(block, TextBlock)).strip()
                 if text and worker.turn:

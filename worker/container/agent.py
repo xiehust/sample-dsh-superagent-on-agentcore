@@ -89,7 +89,8 @@ async def main() -> None:
         return web.json_response({"status": "ok"})
 
     async def status(_r: web.Request) -> web.Response:
-        return web.json_response({"state": "stopped" if worker.stopped else worker.status})
+        # cliStarted: the gateway releases its snapshot page pins once the first turn has the CLI running.
+        return web.json_response({"state": "stopped" if worker.stopped else worker.status, "cliStarted": worker.cli_started})
 
     async def run(request: web.Request) -> web.Response:
         """Returns at once: the repository is prepared by the worker task before its first turn (a clone can take minutes)."""

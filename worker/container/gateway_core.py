@@ -58,8 +58,10 @@ def worker_version(path: str = VERSION_FILE) -> str:
 
 class Gateway:
     def __init__(self, *, verifier: Verifier, mounter: Mounter, agent: AgentClient, store: Store, session_header: Callable[[], str | None] | None = None,
-                 clock: Callable[[], float] = time.time, version: str | None = None) -> None:
+                 clock: Callable[[], float] = time.time, version: str | None = None, on_cli_started: Callable[[], None] | None = None) -> None:
         self.verifier, self.mounter, self.agent, self.store, self.clock = verifier, mounter, agent, store, clock
+        self.on_cli_started = on_cli_started  # once: the agent's first turn has the Claude CLI answering (the pin release)
+        self.cli_seen = False
         self.version = version or worker_version()
         self.lock = asyncio.Lock()
         self.bound_sub: str | None = None
@@ -164,12 +166,21 @@ class Gateway:
         return contracts.ok_response(accepted, await self._agent_status())
 
     async def _agent_status(self) -> str:
-        """The agent's state within 3 s; the last known one if it does not answer (never blocks an invocation)."""
+        """The agent's state within 3 s; the last known one if it does not answer (never blocks an invocation). Notes, once,
+        that the agent's first turn has started the Claude CLI (`cliStarted`), which releases the snapshot page pins."""
         try:
-            state = (await asyncio.wait_for(self.agent.call("/status", None), 3)).get("state", "idle")
+            status = await asyncio.wait_for(self.agent.call("/status", None), 3)
+            state = status.get("state", "idle")
         except Exception:  # noqa: BLE001
             return self.last_state
         self.last_state = state if state in ("idle", "running", "stopped") else "idle"
+        if status.get("cliStarted") is True and not self.cli_seen:
+            self.cli_seen = True
+            try:
+                if self.on_cli_started:
+                    self.on_cli_started()
+            except Exception as error:  # noqa: BLE001 - best effort; never fails a status
+                log("cli_started_hook_failed", error=f"{type(error).__name__}: {str(error)[:200]}")
         return self.last_state
 
     async def busy(self) -> bool:
