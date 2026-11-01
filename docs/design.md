@@ -105,6 +105,8 @@ Semantics:
 - `status` returns the state without side effects.
 - `config` is sent on `start` and on every `deliver`, because prompts may change between turns.
 
+**Cold start (platform V2).** The platform is expected, but not yet verified on a live runtime, to drop the page cache before it snapshots a ready microVM; AWS documents only that the snapshot is taken once `/ping` is healthy. If it does, the first mount after a restore cold-reads the mount helper, `efs-proxy`, botocore and their libraries from the lazily loaded snapshot disk. The gateway therefore starts `pinner.py` before it listens on :8080. The pinner maps the files listed by the image's build-time probe (`pin_manifest.py`; at most 128 MB, within 5 s) so they stay in the snapshot, and the gateway kills it once the first mount ends. This is best effort: a missing manifest or any pinner failure only logs a warning. To check it on a deploy, compare the `mount_ms` of the `mounted` log line on a fresh session's first start with the previous image (14–35 s), and read the `pinned` line (`files`, `bytes`, `pin_ms`).
+
 ### 4.5 Worker → control plane: worker-api (private API GW, Bearer ticket token)
 
 | Route | Body | Result | Semantics |

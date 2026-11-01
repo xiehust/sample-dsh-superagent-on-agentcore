@@ -21,8 +21,8 @@ RUN groupadd -g ${AGENT_UID} agent && useradd -u ${AGENT_UID} -g ${AGENT_UID} -m
 COPY packages/contracts/python/dshsa_contracts.py /app/dshsa_contracts.py
 COPY worker/src/dshsa_worker /app/dshsa_worker
 COPY worker/container/gateway.py worker/container/gateway_core.py worker/container/agent.py worker/container/agent_core.py \
-     worker/container/inbox.py worker/container/render.py worker/container/repo.py worker/container/entrypoint.sh worker/container/git-credential-dshsa \
-     worker/container/gh /app/
+     worker/container/inbox.py worker/container/render.py worker/container/repo.py worker/container/pinner.py worker/container/pin_manifest.py \
+     worker/container/entrypoint.sh worker/container/git-credential-dshsa worker/container/gh /app/
 RUN chmod 755 /app/entrypoint.sh /app/git-credential-dshsa /app/gh && chmod 644 /app/*.py && \
     mv /usr/bin/gh /usr/bin/gh-real && ln -s /app/gh /usr/local/bin/gh
 
@@ -34,5 +34,8 @@ RUN v="${DSHSA_WORKER_VERSION}"; \
     echo "$v" > /app/WORKER_VERSION && chmod 644 /app/WORKER_VERSION
 
 ENV PYTHONPATH=/app PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Last: list the files a first request reads, probed in this finished image (pin_manifest.py). The gateway pins them before
+# it opens :8080 so they survive the page-cache drop before the V2 snapshot (pinner.py). Nothing may replace them afterwards.
+RUN python3.12 -E -s /app/pin_manifest.py /app/pin-manifest.txt && chmod 644 /app/pin-manifest.txt
 EXPOSE 8080
 ENTRYPOINT ["/app/entrypoint.sh"]
