@@ -23,6 +23,11 @@ const REASONS: Record<string, string> = {
   noRuleMatched: 'No enabled admission rule matched',
   ignoredFromCard: 'Ignored from its card, without a rule assessment',
   observed: 'Observe mode: would accept ({text})',
+  // dshsa: the Policy gate's own codes, as the Overview's recent ignores show them.
+  not_a_member: "Sender is not on this Source's allowed list",
+  no_mention: 'The agent was not mentioned',
+  not_human: 'Sent by a bot or system that is not listed',
+  admission_ignored: 'The admission table ignores this kind of message',
   completed: 'Completed',
   dropped: 'No action needed; closed',
   merged: 'PR merged',
@@ -44,6 +49,14 @@ export function reasonText(reason: unknown): string {
     if (typeof code === 'string') return fill(REASONS[code] ?? code, values)
   }
   return ''
+}
+
+/**
+ * One plain-language line per reason of an ignore Decision; a `said` reason is what the assessor wrote, shown as such
+ * (the tenant's own data, on an authenticated page).
+ */
+export function ignoreReasons(reasons: readonly { code: string; values?: Record<string, string> }[]): string[] {
+  return reasons.map(reason => reason.code === 'said' ? `Assessor: ${reason.values?.text ?? ''}`.trim() : reasonText(reason)).filter(Boolean)
 }
 
 const ACTIONS: Record<string, string> = {

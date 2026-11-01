@@ -8,6 +8,7 @@ import { key, liveTicket, type Follow, type OutboundMessage, type ThreadFact, ty
 import type { CellInfo, SourceContext } from '@dshsa/core/host'
 import { sameName } from '@dshsa/core/text'
 import { githubPage, SOURCE, UserSchema } from './trigger.ts'
+import { prefersChinese } from '../language.ts'
 
 export const PullSchema = z.looseObject({
   title: z.string().optional(), state: z.string(), html_url: z.string(), user: UserSchema,
@@ -97,7 +98,7 @@ export function pullEndNotices(ticket: Ticket, request: string, repository: stri
   if ((outcome !== 'merged' && outcome !== 'closed') || !follow) return []
   const number = pullNumber(follow.thread)!
   const url = githubPage(repository, number, true)
-  const chinese = /\p{Script=Han}/u.test(request) && !/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(request)
+  const chinese = prefersChinese(request)
   const text = chinese
     ? outcome === 'merged' ? `[PR #${number}](${url}) 已合并。` : `[PR #${number}](${url}) 已关闭，未合并。`
     : outcome === 'merged' ? `[PR #${number}](${url}) has merged.` : `[PR #${number}](${url}) was closed without merging.`

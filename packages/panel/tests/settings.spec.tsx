@@ -36,14 +36,14 @@ describe('settings blocks', () => {
   it('reports a 409 as changed elsewhere and reloads on request', async () => {
     await openSettings()
     edit('Eval JSON', { mode: 'auto' })
-    api.settings.eval = { value: { mode: 'off', timeoutSeconds: 120, model: null }, revision: 2 } // someone else saved meanwhile
+    api.settings.eval = { value: { mode: 'off', timeoutSeconds: 120, model: null, replyOnIgnore: true }, revision: 2 } // someone else saved meanwhile
     fireEvent.click(within(screen.getByRole('region', { name: 'Eval unsaved changes' })).getByRole('button', { name: 'Save' }))
     const alert = await screen.findByText(/Changed elsewhere/)
     expect(api.find('PUT', '/v1/cells/acme--gh1/api/settings/eval')[0]!.body).toEqual({ value: { mode: 'auto' }, revision: 1 })
-    expect(api.settings.eval.value).toEqual({ mode: 'off', timeoutSeconds: 120, model: null })
+    expect(api.settings.eval.value).toEqual({ mode: 'off', timeoutSeconds: 120, model: null, replyOnIgnore: true })
     fireEvent.click(within(alert.closest('[role="alert"]') as HTMLElement).getByRole('button', { name: 'Reload' }))
     await waitFor(() => expect((screen.getByRole('textbox', { name: 'Eval JSON' }) as HTMLTextAreaElement).value)
-      .toBe(JSON.stringify({ mode: 'off', timeoutSeconds: 120, model: null }, null, 2)))
+      .toBe(JSON.stringify({ mode: 'off', timeoutSeconds: 120, model: null, replyOnIgnore: true }, null, 2)))
     expect(screen.queryByRole('region', { name: 'Eval unsaved changes' })).toBeNull()
   })
 

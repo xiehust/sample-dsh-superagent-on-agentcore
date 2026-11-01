@@ -25,4 +25,6 @@ export const KV = {
   workerEvents: family<string, [eventId: string]>('worker-event:'),
   /** dshsa: the lease fence this database was last written under; a smaller fence never writes again. */
   lease: { fence: record<number>('lease-fence') },
+  /** dshsa: when a Thread last got a reply to an ignored explicit request (`ignore-hint.ts`), as an ISO time. */
+  ignoreHint: family<string, [threadKey: string]>('ignore-hint:'),
 }

@@ -97,6 +97,14 @@ describe('members: read plus Stop/Retry', () => {
     expect(within(problems).queryByRole('button')).toBeNull()
   })
 
+  it('sees the recently ignored list', async () => {
+    asMember()
+    renderPanel()
+    const section = (await screen.findByRole('heading', { name: /Recently ignored/ })).closest('section')!
+    expect(await within(section).findByText('@bot hi')).toBeTruthy()
+    expect(within(section).queryByRole('button')).toBeNull()
+  })
+
   it('may still stop a ticket', async () => {
     asMember()
     openTab('execution')

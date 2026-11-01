@@ -4,8 +4,8 @@
  */
 import type { ReactNode } from 'react'
 import { usePoll } from './api.ts'
-import { localized, reasonText, stageText } from './text.ts'
-import type { Problem, TicketRow } from './types.ts'
+import { ignoreReasons, localized, reasonText, stageText, when } from './text.ts'
+import type { DecisionListView, Problem, TicketRow } from './types.ts'
 import { LoadState, PlainText, Section, Stat, useAction, usePanel } from './widgets.tsx'
 
 function ProblemLine({ problem, reload }: { problem: Problem; reload: () => Promise<void> }) {
@@ -49,6 +49,34 @@ export function TicketLine({ ticket }: { ticket: TicketRow }) {
   </li>
 }
 
+/** dshsa: how many recent ignores the Overview lists (the 24 h window of `GET decisions`). */
+export const RECENT_IGNORES = 20
+type Ignored = DecisionListView['items'][number]
+
+function IgnoredLine({ decision }: { decision: Ignored }) {
+  const sender = decision.sender ? localized(decision.sender.name, decision.sender.id) : ''
+  return <li className="row">
+    <div className="row-main">
+      <PlainText text={decision.preview || decision.threadTitle || decision.thread} className="row-title" />
+      <div className="row-meta"><span>{when(decision.at)}</span>{decision.source && <span className="tag">{decision.source}</span>}
+        {sender && <span>{sender}</span>}{decision.strength === 'explicit' && <span>explicit</span>}</div>
+      {ignoreReasons(decision.reason).map((text, index) => <PlainText key={index} text={text} className="hint" />)}
+    </div>
+  </li>
+}
+
+/** The last ignore Decisions of the past 24 h, newest first, with why each was ignored. Read-only, so members see it too. */
+function RecentlyIgnored() {
+  const { client, cell } = usePanel()
+  const { data, error } = usePoll(() => client.call(cell.cellId, 'GET decisions',
+    { query: { kind: 'ignore', window: '24h', limit: RECENT_IGNORES } }), [cell.cellId])
+  return <Section title="Recently ignored" count={data?.items.length}>
+    {!data ? <LoadState error={error} loading /> : data.items.length
+      ? <ul className="list">{data.items.map(decision => <IgnoredLine key={decision.id} decision={decision} />)}</ul>
+      : <p className="hint">Nothing was ignored in the last 24 hours.</p>}
+  </Section>
+}
+
 export function OverviewPage() {
   const { client, cell } = usePanel()
   const { data, error, reload } = usePoll(() => client.call(cell.cellId, 'GET overview'), [cell.cellId])
@@ -79,5 +107,6 @@ export function OverviewPage() {
         {data.flow.dropped > 0 && <Stat label="Dropped replies" value={data.flow.dropped} />}
       </div>
     </Section>
+    <RecentlyIgnored />
   </>
 }

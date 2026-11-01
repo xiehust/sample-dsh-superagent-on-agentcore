@@ -8,6 +8,7 @@ export { observePull, claimPull, pullEndNotices, pullsOf, pullOf, agentPull, tic
 export { readGithub, readRepositoryPath, pullChecks, ciSummary, githubThreadContext } from './github/read.ts'
 export { sendGithub, githubLink } from './github/channel.ts'
 export { KV } from './kv.ts'
+export { prefersChinese } from './language.ts'
 export { POLL_HORIZON_MS, cursorAt, polled, pause } from './poll.ts'
 export { feishuKind, ingestFeishu, refreshChatNames, syncBoundChats, chatMembers, FEISHU_EVENT_KINDS, type BoundChat, type FeishuConfig } from './feishu/kind.ts'
 export { SOURCE as FEISHU, feishuChannel, feishuThreadId, feishuTriggerId, withMentionNames, feishuTime, feishuTrigger, feishuParent,

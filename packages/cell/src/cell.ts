@@ -11,7 +11,8 @@ import { Engine, type Assessor, type DomainEvent, type Executor, type OutboundMe
 import { HealthBoard, SourceRegistry, type CellInfo, type SourceApis, type SourceContext, type SourceKind } from '@dshsa/core/host'
 import { settingsPolicy } from './policy.ts'
 import { chatMembers } from '@dshsa/sources'
-import { logFiltered, logGateIgnores } from './admission-log.ts'
+import { logFiltered, logIgnores } from './admission-log.ts'
+import { ignoreHint } from './ignore-hint.ts'
 import { Effects } from './app/effects.ts'
 import { Outbox } from './app/outbox.ts'
 import { Passes } from './app/passes.ts'
@@ -130,7 +131,10 @@ export class CellRuntime {
       this.engine = new Engine({ repo: store, scope: sources, policy, assessor: this.assessor, executor: this.executor, outbox: this.outbox,
         prepareTicket: (ticket, outcome) => ({ ...ticket, execution: ticketExecution(ticket, outcome, store.settings()) }),
         emit: event => {
-          if (event.type === 'decision.recorded') store.afterCommit(() => { logGateIgnores(options.log, options.cell.cellId, store, event) })
+          if (event.type === 'decision.recorded') {
+            this.hintIgnored(event.data.decisionId, policy)
+            store.afterCommit(() => { logIgnores(options.log, options.cell.cellId, store, event) })
+          }
           if (options.onEvent) store.afterCommit(() => { options.onEvent!(event, this.parts) })
         } })
       this.passes = new Passes({ engine: { receive: trigger => this.engine.receive(trigger), evaluateDue: () => { this.engine.evaluateDue() } }, effects,
@@ -149,6 +153,20 @@ export class CellRuntime {
       store.close()
       throw error
     }
+  }
+  /**
+   * dshsa: queues the reply to an ignored explicit request (`ignore-hint.ts`) in the Decision's own transaction, so it goes
+   * out exactly when the Decision commits. A failure here is logged and never undoes the Decision.
+   */
+  private hintIgnored(decisionId: string, policy: () => ReturnType<typeof settingsPolicy>): void {
+    const { store } = this
+    try {
+      store.atomic(() => {
+        const decision = store.decisions.get(decisionId)
+        const message = decision && ignoreHint({ store, settings: () => store.settings(), policy }, decision)
+        if (message) this.outbox.send(message)
+      })
+    } catch (error) { this.options.log.warn('ignore hint failed', { cellId: this.cellId, decisionId, error: String(error).slice(0, 300) }) }
   }
   get cellId(): string { return this.options.cell.cellId }
   get health() { return this.board.all }

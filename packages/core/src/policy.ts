@@ -84,6 +84,11 @@ export const EvalConfigSchema = z.object({
   mode: z.enum(['off', 'observe', 'auto']).default('observe'),
   timeoutSeconds: z.number().int().min(LIMITS.evalTimeoutSeconds.min).max(LIMITS.evalTimeoutSeconds.max).default(120),
   model: RoleModelSchema.nullable().default(null),
+  /**
+   * dshsa: when an explicit request (a listed sender who mentioned or messaged the agent) is ignored as no task or an unsettled
+   * direction, reply once in its conversation with how to ask again. Not part of the Policy version.
+   */
+  replyOnIgnore: z.boolean().default(true),
 }).strict()
 const CommandNameSchema = z.string().regex(/^[A-Za-z0-9._-]+$/).refine(name => name !== '.' && name !== '..', 'Not a command name')
   .refine(name => !WORKER_COMMANDS.includes(name), `${WORKER_COMMANDS.join(', ')} cannot be blocked`)

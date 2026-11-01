@@ -111,24 +111,32 @@ export function PolicySection({ settings, reload, jsonEditor }: { settings: Sett
 
 function EvalMode({ block, reload }: { block: SettingsView['blocks']['eval']; reload: () => Promise<void> }) {
   const { client, cell, canEdit, notify } = usePanel()
-  const [draft, setDraft] = useState<{ mode: string; base: number }>()
+  const [draft, setDraft] = useState<{ mode: string; replyOnIgnore: boolean; base: number }>()
   const [conflict, setConflict] = useState(false)
-  const mode = draft?.mode ?? block.value.mode
-  const dirty = canEdit && draft !== undefined && draft.mode !== block.value.mode
+  const stored: { mode: string; replyOnIgnore: boolean } = { mode: block.value.mode, replyOnIgnore: block.value.replyOnIgnore }
+  const current = draft ?? stored
+  const { mode } = current
+  const dirty = canEdit && draft !== undefined && (draft.mode !== stored.mode || draft.replyOnIgnore !== stored.replyOnIgnore)
+  const change = (next: Partial<typeof stored>) => setDraft({ ...current, ...next, base: draft?.base ?? block.revision })
   const save = useAction(async () => {
-    await client.call(cell.cellId, 'PUT settings/:block', { block: 'eval', body: { value: { ...block.value, mode }, revision: draft?.base ?? block.revision } })
-    setDraft(undefined); notify('Eval mode saved.'); await reload()
+    await client.call(cell.cellId, 'PUT settings/:block', { block: 'eval', body: { value: { ...block.value, mode, replyOnIgnore: current.replyOnIgnore },
+      revision: draft?.base ?? block.revision } })
+    setDraft(undefined); notify('Eval settings saved.'); await reload()
   }, { onError: error => error instanceof ApiError && error.kind === 'conflict' ? setConflict(true) : notify(errorText(error)) })
   return <div className="field">
     <label className="field-label">Eval mode
-      <select value={mode} disabled={!canEdit || save.busy} onChange={event => setDraft({ mode: event.target.value, base: draft?.base ?? block.revision })}>
+      <select value={mode} disabled={!canEdit || save.busy} onChange={event => change({ mode: event.target.value })}>
         {MODES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
       </select></label>
     <p className="hint">{MODES.find(item => item.value === mode)?.hint}</p>
+    <label className="field-label"><input type="checkbox" checked={current.replyOnIgnore} disabled={!canEdit || save.busy}
+      onChange={event => change({ replyOnIgnore: event.target.checked })} /> Reply when an explicit request is ignored</label>
+    <p className="hint">A listed sender who mentions or messages the agent without a clear task gets one short reply on how to ask
+      (at most one per conversation in 10 minutes). Others always get silence.</p>
     {conflict && <div className="notice notice-conflict" role="alert"><span>Changed elsewhere since you started editing. Reload to get the latest
       version.</span><button type="button" onClick={() => { setDraft(undefined); setConflict(false); void reload() }}>Reload</button></div>}
     {dirty && <div className="row-actions"><button type="button" onClick={() => setDraft(undefined)}>Discard</button>
-      <button type="button" className="primary" disabled={save.busy} onClick={() => { void save.run() }}>Save Eval mode</button></div>}
+      <button type="button" className="primary" disabled={save.busy} onClick={() => { void save.run() }}>Save Eval settings</button></div>}
   </div>
 }
 

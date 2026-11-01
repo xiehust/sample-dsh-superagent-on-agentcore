@@ -78,8 +78,9 @@ call AWS unless the user asked for it.
   after the build (e.g. `sed -i` at run time). Check the effect against the previous image with a fresh session's first `mounted`
   line (`mount_ms`) and first `cli_started` line (`first: true`, `ms`), and read the `pinned` and `pin_released` lines.
 - Never trust a GitHub `installation_id` from a redirect; verify with the user token (`GET /user/installations`).
-- Policy rejections are logged as `trigger not admitted` with a reason in `/dshsa/host`; check it first when a
-  message "does nothing".
+- Policy rejections are logged as `trigger not admitted` with a reason in `/dshsa/host`, and every other ignore (the
+  Assessor's `said`, `noRuleMatched`, `directionUnsettled`, `observed`, …) as `decision ignored` with its codes; check
+  them first when a message "does nothing". The panel Overview lists the last 24 h of ignores with their reasons.
 
 ## Local workflow (optional)
 

@@ -8,6 +8,7 @@ import type { SourceRegistry } from '../../sources/registry.ts'
 import { workerSessionId } from '../../executor/dsh.ts'
 import type { Store } from '../store.ts'
 import { attribute, markdown, plain, preview, readable } from './text.ts'
+import { leadTrigger } from '../../admission-log.ts'
 
 export type LinkTarget = (channel: ChannelRef) => ChannelLink
 export interface ViewHost { store: Store; sources: SourceRegistry; links: LinkTarget }
@@ -200,7 +201,10 @@ export function decisionView(view: Snapshot, decision: Decision) {
   const audit = AuditSchema.parse(decision.audit ?? {})
   // Fall back to `matches` for assessments recorded by older versions.
   const judged = audit.rule_assessments ?? audit.matches?.map(match => ({ ...match, matched: true })) ?? []
+  // dshsa: who the Decision is about, so the panel can list recent ignores with their sender.
+  const lead = leadTrigger(store, decision.triggerIds)
   return { id: decision.id, kind: decision.kind, outcome: outcomeOf(decision), reason: decision.reason, at: decision.at,
+    source: lead?.source ?? thread?.ref.source, ...lead ? { sender: view.actor(lead.actor, lead.human) } : {},
     strength: decision.strength, ticketId: decision.ticketId, triggerIds: decision.triggerIds, thread: decision.threadKey,
     rules: judged.map(rule => ({ ...view.rule(rule.rule_id), matched: rule.matched, reason: rule.reason })),
     ...audit.direction ? { direction: audit.direction } : {},

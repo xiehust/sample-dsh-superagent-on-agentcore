@@ -6,7 +6,7 @@
  */
 import { cleanup } from '@testing-library/react'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
-import type { Api, ApiResponse, CellView, ChatBinding, DirectoryUser, FeishuStatusView, GithubAppView, InstallationClaim, Issue, Localized,
+import type { Api, ApiResponse, CellView, ChatBinding, DecisionListView, DirectoryUser, FeishuStatusView, GithubAppView, InstallationClaim, Issue, Localized,
   OverviewView, PanelRole, Problem, PromptConfig, PromptVersion, SeenChatView, SettingsView, SetupCell, SetupRepository, SourceSettings, TenantView,
   TicketPageView, TicketRow, TicketStage, TranscriptEntry } from '../src/types.ts'
 
@@ -16,7 +16,7 @@ export const ID_TOKEN = 'header.eyJzdWIiOiJ1MSIsImVtYWlsIjoib3BAZXhhbXBsZS5jb20i
 
 /** DSH management routes panel-api forwards (`ANY /v1/cells/{cellId}/api/{route+}`), as `METHOD pattern` keys of the cell's `Api`. */
 const FORWARDED = ['GET state', 'GET overview', 'GET tickets', 'GET tickets/:id', 'POST tickets/:id/retry', 'POST tickets/:id/stop',
-  'POST executor/pause', 'POST triggers/:id/requeue', 'POST decisions/:id/dismiss', 'GET settings', 'PUT settings/:block', 'GET prompts',
+  'POST executor/pause', 'POST triggers/:id/requeue', 'GET decisions', 'POST decisions/:id/dismiss', 'GET settings', 'PUT settings/:block', 'GET prompts',
   'PUT prompts', 'POST policy-sync/:id', 'GET sources/feishu/members', 'GET sources/github/collaborators'] as const satisfies readonly (keyof Api)[]
 /** The only forwarded mutations a member may make (control-api `cellRouteRole`); every other non-GET is 403 for members. */
 const MEMBER_WRITES = new Set(['POST tickets/:id/retry', 'POST tickets/:id/stop'])
@@ -66,6 +66,12 @@ const row = ({ environment: _e, mandate: _m, basis: _b, paused: _p, channels: _c
 const promptConfig = (communication: string): PromptConfig => ({ communication, scope: '', delivery: '', skills: {} })
 
 /** The GitHub and Feishu Sources of `GET settings`, with the Policy metadata of packages/sources (abridged hints). */
+/** An ignore Decision as `GET decisions` lists it. */
+export function ignored(id: string, reason: DecisionListView['items'][number]['reason'], fields: Partial<DecisionListView['items'][number]> = {}):
+  DecisionListView['items'][number] {
+  return { id, kind: 'ignore', outcome: 'ignore', reason, at: '2026-10-30T10:00:00Z', strength: 'inferred', ticketId: undefined, triggerIds: [`tr-${id}`],
+    thread: 'github:7', rules: [], preview: '', ticketTitle: undefined, source: 'github', ...fields }
+}
 export function settingsSources(): SourceSettings[] {
   const base = { installed: true, restarts: [], fields: [], facts: {}, revision: 1 }
   return [
@@ -120,7 +126,7 @@ export function createFakeApi() {
   }
   const settings: SettingsView['blocks'] = {
     policy: { value: { rules: [{ id: 'r1', name: 'Bugs', enabled: true, instruction: 'Fix reported bugs.' }], sources: {} }, revision: 3 },
-    eval: { value: { mode: 'observe', timeoutSeconds: 120, model: null }, revision: 1 },
+    eval: { value: { mode: 'observe', timeoutSeconds: 120, model: null, replyOnIgnore: true }, revision: 1 },
     executor: { value: { model: { provider: 'bedrock', model: 'global.anthropic.claude-opus-5-5' }, maxWorkers: 3, directory: '',
       prepare: '', blockedCommands: [] }, revision: 2 },
   }
@@ -149,6 +155,11 @@ export function createFakeApi() {
         attention: { id: 'q1', question: 'Which branch should I target?' } }),
     ],
     overview, settings, prompts, transcript,
+    /** `GET decisions?kind=ignore&window=24h`: the Overview's recently ignored list, newest first. */
+    ignored: [ignored('d1', [{ code: 'said', values: { text: 'Just a greeting, no task.' } }], { preview: '@bot hi', strength: 'explicit',
+      sender: { source: 'feishu', id: 'ou_ann', name: text('Ann') }, source: 'feishu' }),
+    ignored('d2', [{ code: 'not_a_member', triggerId: 'tr2' }], { preview: 'please fix the build', sender: { source: 'github', id: 'mallory' } })] as
+      DecisionListView['items'],
     bindings: new Map<string, ChatBinding[]>([['acme', [{ chatId: 'oc_team', cellId: 'acme--gh1', chatName: 'Team chat' }]]]),
     /** `GET settings` Sources (Policy form metadata). */
     sources: settingsSources(),
@@ -273,6 +284,10 @@ export function createFakeApi() {
         return answer<'POST executor/pause'>({ paused: state.paused })
       }
       case 'POST triggers/:id/requeue': return answer<'POST triggers/:id/requeue'>({ queued: true })
+      case 'GET decisions': {
+        if (query.kind !== 'ignore' || query.window !== '24h') misuse.push(`GET decisions query ${JSON.stringify(query)}`)
+        return answer<'GET decisions'>({ items: state.ignored.slice(0, Number(query.limit ?? 30)), next_offset: null })
+      }
       case 'POST decisions/:id/dismiss': return answer<'POST decisions/:id/dismiss'>({ dismissed: true })
       case 'GET settings': return answer<'GET settings'>({ policyVersion: 'abcdef0123', blocks: state.settings, sources: state.sources,
         environment: { root: '/mnt/work', variables: [] } })

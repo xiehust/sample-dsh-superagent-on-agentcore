@@ -219,3 +219,9 @@ Each produces `spikes/S<n>-*.md` with numbers and a recommendation. A result tha
 - **v6.2**: `GithubOauthSecret` gains optional `appId`/`slug` (mirrored by app-set); `InstallationClaim` gains
   required `status: active|pending`, `account`, `accountType`, `githubLogin`, optional `pendingReason`,
   `approvedBy/At` — org installs need an org admin or platform approval.
+- **Not contract (2026-11-01, ignored requests)**: cell setting `eval.replyOnIgnore: boolean` (zod default `true`, so stored
+  settings parse; outside the Policy version). Cell view `DecisionView` gains optional `source` and `sender` (panel
+  "Recently ignored", `GET decisions?kind=ignore&window=24h`). Host log line `decision ignored`
+  `{cellId, decisionId, triggerIds, strength, codes, source, actor}` for every ignore the gate did not record. Cell KV
+  family `ignore-hint:<threadKey>` holds the last hint time (one hint per Thread per 10 min, message id
+  `key('ignore-hint', triggerId)`).

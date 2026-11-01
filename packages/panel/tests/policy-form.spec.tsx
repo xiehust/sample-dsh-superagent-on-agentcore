@@ -119,9 +119,19 @@ describe('policy form', () => {
     const { user } = await openForm()
     await user.selectOptions(screen.getByRole('combobox', { name: 'Eval mode' }), 'auto')
     expect(screen.getByText(/may start work it infers/)).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Save Eval mode' }))
+    await user.click(screen.getByRole('button', { name: 'Save Eval settings' }))
     await waitFor(() => expect(api.find('PUT', '/v1/cells/acme--gh1/api/settings/eval')[0]?.body)
-      .toEqual({ value: { mode: 'auto', timeoutSeconds: 120, model: null }, revision: 1 }))
+      .toEqual({ value: { mode: 'auto', timeoutSeconds: 120, model: null, replyOnIgnore: true }, revision: 1 }))
+  })
+
+  it('turns the reply to ignored explicit requests off in the eval block', async () => {
+    const { user } = await openForm()
+    const toggle = screen.getByRole('checkbox', { name: 'Reply when an explicit request is ignored' }) as HTMLInputElement
+    expect(toggle.checked).toBe(true)
+    await user.click(toggle)
+    await user.click(screen.getByRole('button', { name: 'Save Eval settings' }))
+    await waitFor(() => expect(api.find('PUT', '/v1/cells/acme--gh1/api/settings/eval')[0]?.body)
+      .toEqual({ value: { mode: 'observe', timeoutSeconds: 120, model: null, replyOnIgnore: false }, revision: 1 }))
   })
 
   it('keeps the JSON editor as the Advanced tab', async () => {

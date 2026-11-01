@@ -9,7 +9,7 @@ type SourceSettings = SettingsVersion['settings']['sources'][string]
 export type SettingsChangeCode = 'ruleAdded' | 'ruleRenamed' | 'ruleInstruction' | 'ruleEnabled' | 'ruleDisabled' | 'ruleRemoved'
   | 'sourceEnabled' | 'sourceDisabled' | 'sourceField' | 'sourceRowsAdded' | 'sourceRowsRemoved' | 'sourceRowsChanged' | 'sourceAdmission'
   | 'mode' | 'timeout' | 'evalModel' | 'executorModel' | 'maxWorkers' | 'paused' | 'resumed' | 'executionDirectory' | 'prepareCommand'
-  | 'blockedCommands'
+  | 'blockedCommands' | 'replyOnIgnore'
 /** A single settings diff entry rendered by the panel using `change.<code>` and field labels from the Source listing. */
 export interface SettingsChange {
   code: SettingsChangeCode; items?: string[]; from?: string | number | boolean; to?: string | number | boolean; name?: string; source?: string
@@ -65,6 +65,9 @@ function settingsChanges(before: SettingsVersion['settings'], after: SettingsVer
   if (before.eval.mode !== after.eval.mode) changes.push({ code: 'mode', from: before.eval.mode, to: after.eval.mode })
   if (before.eval.timeoutSeconds !== after.eval.timeoutSeconds) changes.push({ code: 'timeout', from: before.eval.timeoutSeconds, to: after.eval.timeoutSeconds })
   if (!same(before.eval.model, after.eval.model)) changes.push({ code: 'evalModel' })
+  // dshsa: snapshots saved before the field existed hold no value, which means the default (on).
+  const replyOnIgnore = (eval_: { replyOnIgnore?: boolean }) => eval_.replyOnIgnore ?? true
+  if (replyOnIgnore(before.eval) !== replyOnIgnore(after.eval)) changes.push({ code: 'replyOnIgnore', from: replyOnIgnore(before.eval), to: replyOnIgnore(after.eval) })
   if (!same(before.executor.model, after.executor.model)) changes.push({ code: 'executorModel' })
   if (before.executor.maxWorkers !== after.executor.maxWorkers) changes.push({ code: 'maxWorkers', from: before.executor.maxWorkers, to: after.executor.maxWorkers })
   if (before.paused !== after.paused) changes.push({ code: after.paused ? 'paused' : 'resumed' })

@@ -14,7 +14,7 @@ import type { Api, ApiRequest, ApiResponse, CellListView, CellView, ChatBinding,
  * panel-api forwards them to the cell that holds the lease; request and response shapes come from `Api`.
  */
 export const CELL_ROUTES = ['GET state', 'GET overview', 'GET tickets', 'GET tickets/:id', 'POST tickets/:id/retry', 'POST tickets/:id/stop',
-  'POST executor/pause', 'POST triggers/:id/requeue', 'POST decisions/:id/dismiss', 'GET settings', 'PUT settings/:block', 'GET prompts',
+  'POST executor/pause', 'POST triggers/:id/requeue', 'GET decisions', 'POST decisions/:id/dismiss', 'GET settings', 'PUT settings/:block', 'GET prompts',
   'PUT prompts', 'POST policy-sync/:id', 'GET sources/feishu/members', 'GET sources/github/collaborators'] as const satisfies readonly (keyof Api)[]
 export type CellRoute = typeof CELL_ROUTES[number]
 export type CellApi = Pick<Api, CellRoute>

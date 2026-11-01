@@ -89,6 +89,28 @@ describe('overview', () => {
     await waitFor(() => expect(api.count('POST decisions/d9/dismiss')).toBe(1))
   })
 
+  it('lists the last 24 h of ignores with time, source, sender, preview and a plain reason for each', async () => {
+    renderPanel()
+    const section = (await screen.findByRole('heading', { name: /Recently ignored/ })).closest('section')!
+    const rows = await within(section).findAllByRole('listitem')
+    expect(rows).toHaveLength(2)
+    expect(within(rows[0]!).getByText('@bot hi')).toBeTruthy()
+    expect(within(rows[0]!).getByText('feishu')).toBeTruthy()
+    expect(within(rows[0]!).getByText('Ann')).toBeTruthy()
+    expect(within(rows[0]!).getByText('Assessor: Just a greeting, no task.')).toBeTruthy()
+    expect(within(rows[0]!).getByText(/Oct 30, 2026/)).toBeTruthy()
+    expect(within(rows[1]!).getByText('mallory')).toBeTruthy()
+    expect(within(rows[1]!).getByText("Sender is not on this Source's allowed list")).toBeTruthy()
+    expect(within(section).queryByText('not_a_member')).toBeNull()
+    expect(api.find('GET', '/v1/cells/acme--gh1/api/decisions')[0]!.query).toEqual({ kind: 'ignore', window: '24h', limit: '20' })
+  })
+
+  it('says so when nothing was ignored in the last 24 h', async () => {
+    api.ignored = []
+    renderPanel()
+    expect(await screen.findByText('Nothing was ignored in the last 24 hours.')).toBeTruthy()
+  })
+
   it('opens a person ticket in Execution', async () => {
     const { user } = renderPanel()
     await user.click(await screen.findByRole('button', { name: 'Question about docs' }))
