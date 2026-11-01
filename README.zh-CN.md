@@ -86,14 +86,15 @@ dshsa 把 GitHub 和飞书/Lark 中的消息转成 **Ticket**（工单），交�
 | `worker/` | AgentCore 容器（`container/`：gateway、agent、Dockerfile），以及 broker、provisioner 和 worker-api 三个 Lambda（`src/dshsa_worker`），均为 Python |
 | `infra/` | CDK 应用：`dshsa-shared`、`dshsa-worker`、`dshsa-host`、`dshsa-ingress`、`dshsa-panel` |
 | `scripts/` | `deploy.sh`、`destroy.sh`、`e2e/run.sh` |
-| `docs/` | 运维指南：GitHub App、飞书机器人、e2e 搭建清单 |
+| `docs/` | 设计文档（`design.md`、`onboarding-design.md`）和运维指南：e2e 搭建清单、GitHub App、飞书机器人 |
 | `spikes/` | 风险验证及报告：S1 S3 Files 上的 git、S2 SDK 会话恢复、S3 飞书 WebSocket |
 | `research/` | 对原型和隔离示例的分析（中文） |
 | `dsh-superagent-prototype/` | 上游原型，只读保留，作为移植参考 |
 
 ## 安全模型
 
-- **租户即 Cognito 组。** `dshsa-admin tenant add` 会创建对应的组。只有当用户的 `cognito:groups` 包含某个 cell 所属租户的组时，panel-api 才会为其服务该 cell。
+- **团队和角色即 Cognito 组。** 每个团队（租户）有一个成员组和一个团队管理员组，平台管理员另有一个组。只有当用户的 `cognito:groups` 包含某个 cell 所属团队的组时，panel-api 才会为其服务该 cell；只有团队管理员和平台管理员可以修改设置、仓库、机器人和群聊。成员只能查看，以及停止或重试 Ticket。
+- **关联 installation 凭证明，不凭 id。** 团队管理员在面板中登录 GitHub 来关联一个 GitHub installation，面板只列出 GitHub 确认该用户能访问的 installation。只有装在用户自己账号上、或装在该用户担任管理员的组织上的 installation 会直接生效，其余的要等平台管理员批准。
 - **按 Ticket 隔离存储。** 每个 Ticket 有自己的 S3 Files 访问点。broker 签发的 STS 凭证带有会话策略，固定到该访问点的 ARN。文件系统策略拒绝一切不经访问点的访问。AgentCore 的**执行角色没有任何 S3 或 S3 Files 权限**。
 - **ticket token 是 worker 唯一的权限来源。** 它是用 KMS 密钥（`alias/dshsa-ticket-token`）签名的 ES256 JWS，最长有效 2 小时，范围限定到租户、cell、Ticket 和 assignment，只有 cell 能签发。它只保存在以 root 运行的 gateway 进程中，agent 通过 gateway 的本地代理访问控制面。只有 host 角色可以调用 `InvokeAgentRuntime`，任何角色都不能调用 `InvokeAgentRuntimeCommand`。
 - **内部调用要证明调用方的 IAM 身份。** panel-api 和 worker-api 调用 host 的内部 HTTP 端点时，附带一个预签名的 `sts:GetCallerIdentity` URL，签名同时覆盖目标 cell。host 执行这个 URL 并核对返回的角色 ARN。安全组是第二道防线。
@@ -105,6 +106,7 @@ dshsa 把 GitHub 和飞书/Lark 中的消息转成 **Ticket**（工单），交�
 - 用于 Python worker 的 [uv](https://docs.astral.sh/uv/)（Python ≥ 3.12）。
 - 能构建 `linux/arm64` 镜像的 Docker：CDK 会构建 host 和 worker 镜像。
 - AWS CLI，以及目标账号的管理员凭证。脚本和文档会用到 `curl` 和 `jq`。
+- 在 `DSHSA_ACCOUNT` 中指定目标账号 id：可以 export，也可以写入 `scripts/local.env`（`DSHSA_ACCOUNT=<12 位账号 id>`；该文件已被 gitignore，由 `scripts/lib.sh` 读取）。未设置时脚本拒绝运行。
 - 在目标账号和区域完成 CDK bootstrap：`cd infra && pnpm exec cdk bootstrap aws://<account-id>/ap-northeast-1`。
 - 已开通上述 Claude 模型在 Bedrock 上的访问权限（通过 `global.` 推理配置文件）。
 
@@ -112,7 +114,7 @@ dshsa 把 GitHub 和飞书/Lark 中的消息转成 **Ticket**（工单），交�
 
 区域是 **ap-northeast-1**。它是常量而不是选项：定义在 `packages/contracts/src/names.ts` 的 `REGION`（及其 Python 镜像）和 `scripts/lib.sh` 的 `AWS_REGION` 中。换区域需要修改这些位置，并通过 `DSHSA_AZS` 传入映射到 AgentCore 支持的 AZ ID 的可用区名称。
 
-CDK 应用和脚本都固定到一个账号（`infra/lib/compose.ts` 中的 `ACCOUNT`、`scripts/lib.sh` 中的 `DSHSA_ACCOUNT`）。要部署到其他账号，设置 `DSHSA_ALLOW_ANY_ACCOUNT=true`。
+CDK 应用和脚本只部署到 `DSHSA_ACCOUNT`（来自环境变量或 `scripts/local.env`）指定的账号，其他账号的凭证一律拒绝。仓库中不含任何账号 id：`infra/lib/compose.ts` 中的 `ACCOUNT` 只是供测试和本地 synth 使用的占位值。设置 `DSHSA_ALLOW_ANY_ACCOUNT=true` 可跳过这项检查。
 
 ```sh
 pnpm install
@@ -148,37 +150,21 @@ scripts/destroy.sh
 
 ## 接入一个团队
 
-以下命令需要平台管理员的 AWS 凭证。完整清单（包括 GitHub 和飞书控制台中的步骤）见 [docs/e2e-setup.md](docs/e2e-setup.md)，细节见 [docs/github-app.md](docs/github-app.md) 和 [docs/feishu-bot.md](docs/feishu-bot.md)。
+接入在面板（`PanelUrl`）中自助完成。完整的分步清单（包括 GitHub 和飞书控制台中的步骤）见 [docs/e2e-setup.md](docs/e2e-setup.md)，细节见 [docs/github-app.md](docs/github-app.md) 和 [docs/feishu-bot.md](docs/feishu-bot.md)。
 
-```sh
-alias admin='pnpm --silent --filter @dshsa/control-api admin'
-admin tenant add <tenantId> --name "<Team name>"
-admin user add <you@example.com> --tenant <tenantId>
-admin github app-set --app-id <APP_ID> --private-key-file <app.private-key.pem>
-admin cell add <tenantId> --repo <owner>/<repo> --repo-id <REPO_ID> --installation-id <INSTALLATION_ID> --default-branch main
-read -rs FEISHU_APP_SECRET && echo
-admin feishu set <tenantId> --domain feishu --app-id <cli_APP_ID> --app-secret "$FEISHU_APP_SECRET"
-unset FEISHU_APP_SECRET
-admin chat bind <tenantId> <oc_CHAT_ID> <tenantId>--gh<REPO_ID> --name "<chat name>"
-```
+1. **GitHub App**（平台，一次）：创建时填写 Redirect URI `<PanelUrl>/setup/github/callback` 和 Setup URL `<PanelUrl>/setup/github`，授予 **Organization permissions → Members: Read-only**，并生成一个 client secret。
+2. **第一个平台管理员**（唯一的命令行步骤）：`pnpm --filter @dshsa/control-api admin user add-admin <email>`。Cognito 会通过邮件发送临时密码。
+3. **Platform** 页：在 **GitHub App** 中填入 App ID、私钥、Client ID 和 client secret，slug 从 GitHub 读取。在 **Teams** 中创建团队，在 **Users** 中邀请该团队的团队管理员。
+4. **Team setup** 页（团队管理员），按页面上的 **Onboarding checklist** 进行：
+   - **Repositories**：先点 **Install / configure the GitHub App**，再点 **Link installations**，然后对每个仓库点 **Add**。装在你自己账号上、或装在你担任管理员的组织上的 installation 会立即关联，其他的要等平台管理员在 **Platform → GitHub installations** 中批准。
+   - **Feishu / Lark**：填入机器人的 App ID 和 App Secret，等机器人显示 **Connected** 后，再在控制台完成事件配置。每个团队使用自己的应用。
+   - **Chats**：把机器人加入群聊并 @ 它一次，然后为该群选择仓库。
+   - **Users**：邀请成员和其他团队管理员。
+5. **Settings → Policy**（按仓库）：在表单中列出可以发起工作的人，可用 **Add from repo collaborators** 和 **Add all members of <chat>**，并设置 **Eval mode**。**Advanced (JSON)** 可编辑整个配置块。
 
-1. 先建**租户**，再建**面板用户**。Cognito 会通过邮件发送临时密码。
-2. **GitHub App**，整个平台只需配置一次。`app-set` 会向 GitHub（`GET /app`）核对 App ID 和私钥，并保存 App 的真实 slug，所以 `--slug` 可以省略。完成后要重启 host，因为 cell 只在启动时读取 slug 和私钥。
-3. **Cell**：对应一个已安装 App 的仓库，cell id 为 `<tenantId>--gh<repoId>`。
-4. **飞书/Lark 机器人**，每个租户配置一次。Lark 使用 `--domain lark`。`read -rs` 不回显输入，App Secret 不会出现在屏幕上或 shell 历史中。
-5. **群聊绑定**：被绑定群里的消息会进入对应的 cell。面板的 Settings 页面也可以查看和编辑绑定。
-6. **Policy**：在面板中，**Settings → Configuration → Policy** 是一个 JSON 编辑器，内容为 `{ "rules": [...], "sources": {...} }`。保持 `rules` 不变，在 `sources` 下列出可以发起工作的人：
+**Eval 模式**（`Off`、`Observe` 或 `Auto`，默认 `Observe`）只影响**推断类**消息，即没有 @ 智能体、也不是私聊的消息。`Observe` 下这类消息会被评估并记为"本会受理"（would accept），但不做任何处理；`Auto` 下它们可以成为 Ticket；`Off` 下不做评估。名单内的人明确 @ 智能体或私聊它时，无论哪种模式都会被评估。
 
-   ```json
-   "sources": {
-     "github": { "allowed": [{ "id": "<github-login>" }] },
-     "feishu": { "allowed": [{ "id": "ou_<open_id>", "name": "<optional display name>" }] }
-   }
-   ```
-
-   GitHub 条目只有 `id`。飞书条目包含 `open_id`（`ou_…`）和可选的 `name`。保存时由 host 校验整个配置块。
-
-**Eval 模式**（`Settings → Configuration → Eval` 中的 `mode`，可选 `off` | `observe` | `auto`，默认 `observe`）只影响**推断类**消息，即没有 @ 智能体、也不是私聊的消息。`observe` 下这类消息会被评估并记为"本会受理"（would accept），但不做任何处理；`auto` 下它们可以成为 Ticket；`off` 下不做评估。名单内的人明确 @ 智能体或私聊它时，无论哪种模式都会被评估。
+每一步也都有对应的 `dshsa-admin` 命令，见 [docs/e2e-setup.md](docs/e2e-setup.md) 中的 "Appendix: CLI fallback"。
 
 ## 开发
 
@@ -225,22 +211,23 @@ scripts/e2e/run.sh --strict --wait 60
 - **接入层校验**：未签名和伪造签名的 webhook 被拒绝（`check:ingress`）。
 
 已知不足：
-- 被拒绝的 Trigger 不会连同原因记录到日志。
-- 面板的 Policy 页面只是原始 JSON 编辑器。
 - A6（未授权或未 @ 的消息不产生 Ticket）和 A7（销毁后不留残余）尚未端到端自动化。`run.sh` 中已有 A6 步骤，其中 A2–A5 的线上步骤仍是占位。
-- **上生产前请轮换 GitHub webhook 密钥。** 运行 `admin github app-set … --webhook-secret <new>`，并在 App 中填入同一个值。
+- **上生产前请轮换 GitHub webhook 密钥。** 在 **Platform → GitHub App → Webhook secret (optional)** 中填入新值（需同时提供私钥），或运行 `admin github app-set … --webhook-secret <new>`，并在 App 中填入同一个值。
 
 ## 故障排查
 
-host 日志在 CloudWatch 日志组 `/dshsa/host` 中。webhook Lambda 的日志在 `/dshsa/ingress-github-webhook`，panel-api 的在 `/dshsa/panel-api`。
+host 日志在 CloudWatch 日志组 `/dshsa/host` 中。webhook Lambda 的日志在 `/dshsa/ingress-github-webhook`，panel-api 的在 `/dshsa/panel-api`，面板的接入操作审计记录在 `/dshsa/panel-admin`。
 
 | 日志消息 | 含义 |
 |---|---|
 | `feishu.health` | 每个租户的 Connector 状态：`starting`、`ready`（detail 为 `Listening for bot events`）或附带原因的 `error` |
-| `feishu.unrouted` | 收到了来自未绑定群的消息。日志中的 `chatId` 就是 `admin chat bind` 需要的值 |
+| `trigger not admitted` | cell 没有受理一条消息。`reason` 说明原因，例如 `not_a_member`（发送者不在 Policy 名单中）、`no_mention`（没有 @ 智能体）或 `not_human`（不在机器人名单中的机器人）；`at` 为 `intake` 或 `gate` |
+| `feishu.unrouted` | 收到了来自未绑定群的消息。在 **Team setup → Chats** 中绑定它（日志中的 `chatId` 就是 `admin chat bind` 需要的值） |
 | `poison envelope dropped` | cell 队列中的一条消息不是合法信封，已被删除，以免阻塞该 cell 的 FIFO 消息组；日志中带有解析错误 |
 | `worker event refused` | 领域层拒绝了一个 worker 事件（例如对已结束 Ticket 的 report）。它会被记录下来，不再重试 |
 
-- **slug 不是 Client ID。** App 的 slug 是 `github.com/apps/<slug>` 的最后一段，也就是大家 @ 的名字；Client ID（`Iv…`）是另一回事。`admin github app-set` 会从 GitHub 读取 slug，并拒绝错误的 `--slug`。
-- **Webhook 返回 401 / 503**：见 [docs/e2e-setup.md](docs/e2e-setup.md) 中的故障排查表。
-- **飞书控制台无法保存长连接模式**：先运行 `admin feishu set`，等到 `feishu.health` 变为 `ready` 再保存。
+- **slug 不是 Client ID。** App 的 slug 是 `github.com/apps/<slug>` 的最后一段，也就是大家 @ 的名字；Client ID（`Iv…`）是另一回事。面板和 `admin github app-set` 都会从 GitHub 读取 slug。
+- **installation 等待平台批准**：原因是 `not_own_account`（装在别人账号上的个人 installation）、`not_org_admin`（该用户不是组织管理员）或 `membership_unavailable`（GitHub 没有确认组织角色，通常是 App 缺少 **Members: Read-only** 权限）。平台管理员在 **Platform → GitHub installations** 中批准。
+- **Belongs to another team**（`other_tenant`）：另一个团队已关联该 installation，平台管理员可以释放它。只要还有仓库在使用该 installation，**Unlink** 和 **Release** 都会返回 `409 installation_in_use`：先停用（Disable）这些仓库。
+- **Webhook 返回 401 / 503** 等更多问题：见 [docs/e2e-setup.md](docs/e2e-setup.md) 中的故障排查表。
+- **飞书控制台无法保存长连接模式**：先在 **Team setup → Feishu / Lark** 中保存机器人，等到显示 **Connected**（`feishu.health` 为 `ready`）再保存。

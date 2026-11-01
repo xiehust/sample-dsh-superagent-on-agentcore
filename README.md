@@ -86,14 +86,15 @@ The dashed boxes are trust boundaries: a **tenant cell** (one Engine per tenant 
 | `worker/` | The AgentCore container (`container/`: gateway, agent, Dockerfile) and the broker, provisioner and worker-api Lambdas (`src/dshsa_worker`), in Python |
 | `infra/` | The CDK app: `dshsa-shared`, `dshsa-worker`, `dshsa-host`, `dshsa-ingress`, `dshsa-panel` |
 | `scripts/` | `deploy.sh`, `destroy.sh`, `e2e/run.sh` |
-| `docs/` | Operator guides: GitHub App, Feishu bot, the e2e setup checklist |
+| `docs/` | The design (`design.md`, `onboarding-design.md`) and operator guides: the e2e setup checklist, GitHub App, Feishu bot |
 | `spikes/` | Risk spikes with reports: S1 git on S3 Files, S2 SDK resume, S3 Feishu WebSocket |
 | `research/` | Analysis of the prototype and the isolation sample, in Chinese |
 | `dsh-superagent-prototype/` | The upstream prototype, kept read-only as the porting reference |
 
 ## Security model
 
-- **Tenants are Cognito groups.** `dshsa-admin tenant add` creates the group. panel-api serves a cell only when the user's `cognito:groups` contains that cell's tenant group.
+- **Teams and roles are Cognito groups.** A team (tenant) has a member group and a team-admin group; platform admins have their own group. panel-api serves a cell only when the user's `cognito:groups` contains that cell's team group, and only team admins and platform admins may change settings, repositories, the bot or chats. Members read, and may Stop or Retry tickets.
+- **Installations are linked by proof, not by id.** A team admin links a GitHub installation by signing in to GitHub in the panel; the panel lists the installations that GitHub says the user can access. It is active only for the user's own account or an organization they are an admin of. Anything else waits for a platform admin's approval.
 - **Per-Ticket storage.** Each Ticket has its own S3 Files access point. The broker issues STS credentials with a session policy pinned to that access point's ARN. The file-system policy denies access that does not go through an access point. The AgentCore **execution role has no S3 or S3 Files permissions**.
 - **The ticket token is the worker's only authority.** It is an ES256 JWS signed with a KMS key (`alias/dshsa-ticket-token`), lasts at most 2 h, and is scoped to tenant, cell, Ticket and assignment. Only the cell issues it. It stays in the root gateway process, and the agent reaches the control plane through the gateway's local proxy. Only the host role may call `InvokeAgentRuntime`, and nobody may call `InvokeAgentRuntimeCommand`.
 - **Internal calls prove the caller's IAM identity.** panel-api and worker-api call the host's internal HTTP endpoint with a presigned `sts:GetCallerIdentity` URL that also signs the target cell. The host executes the URL and checks the returned role ARN. Security groups are a second layer.
@@ -105,6 +106,7 @@ The dashed boxes are trust boundaries: a **tenant cell** (one Engine per tenant 
 - [uv](https://docs.astral.sh/uv/) for the Python worker (Python ≥ 3.12).
 - Docker able to build `linux/arm64` images: CDK builds the host and worker images.
 - The AWS CLI with admin credentials for the target account. `curl` and `jq` are used by the scripts and docs.
+- The target account id in `DSHSA_ACCOUNT`: export it, or put `DSHSA_ACCOUNT=<12-digit account id>` in `scripts/local.env` (gitignored; `scripts/lib.sh` sources it). The scripts refuse to run without it.
 - CDK bootstrapped in the target account and region: `cd infra && pnpm exec cdk bootstrap aws://<account-id>/ap-northeast-1`.
 - Bedrock model access to the Claude models above, through their `global.` inference profiles.
 
@@ -112,7 +114,7 @@ The dashed boxes are trust boundaries: a **tenant cell** (one Engine per tenant 
 
 The region is **ap-northeast-1**. It is a constant, not an option: `REGION` in `packages/contracts/src/names.ts` (and its Python mirror), and `AWS_REGION` in `scripts/lib.sh`. Moving regions means changing those, and passing AZ names that map to AgentCore-supported AZ IDs (`DSHSA_AZS`).
 
-The CDK app and the scripts are pinned to one account (`ACCOUNT` in `infra/lib/compose.ts`, `DSHSA_ACCOUNT` in `scripts/lib.sh`). Set `DSHSA_ALLOW_ANY_ACCOUNT=true` to deploy to another account.
+The CDK app and the scripts deploy only to the account in `DSHSA_ACCOUNT` (from the environment or `scripts/local.env`), and refuse credentials for any other account. The repository holds no account id: `ACCOUNT` in `infra/lib/compose.ts` is a placeholder for tests and local synth. Set `DSHSA_ALLOW_ANY_ACCOUNT=true` to skip the check.
 
 ```sh
 pnpm install
@@ -148,37 +150,21 @@ It then lists anything still tagged `project=dshsa`.
 
 ## Onboarding a team
 
-Run these with platform-admin AWS credentials. The full checklist, including the GitHub and Feishu console steps, is [docs/e2e-setup.md](docs/e2e-setup.md). The details are in [docs/github-app.md](docs/github-app.md) and [docs/feishu-bot.md](docs/feishu-bot.md).
+Onboarding is self-service in the panel (`PanelUrl`). The step-by-step checklist, including the GitHub and Feishu console steps, is [docs/e2e-setup.md](docs/e2e-setup.md). The details are in [docs/github-app.md](docs/github-app.md) and [docs/feishu-bot.md](docs/feishu-bot.md).
 
-```sh
-alias admin='pnpm --silent --filter @dshsa/control-api admin'
-admin tenant add <tenantId> --name "<Team name>"
-admin user add <you@example.com> --tenant <tenantId>
-admin github app-set --app-id <APP_ID> --private-key-file <app.private-key.pem>
-admin cell add <tenantId> --repo <owner>/<repo> --repo-id <REPO_ID> --installation-id <INSTALLATION_ID> --default-branch main
-read -rs FEISHU_APP_SECRET && echo
-admin feishu set <tenantId> --domain feishu --app-id <cli_APP_ID> --app-secret "$FEISHU_APP_SECRET"
-unset FEISHU_APP_SECRET
-admin chat bind <tenantId> <oc_CHAT_ID> <tenantId>--gh<REPO_ID> --name "<chat name>"
-```
+1. **GitHub App** (platform, once): create it with the Redirect URI `<PanelUrl>/setup/github/callback`, the Setup URL `<PanelUrl>/setup/github`, **Organization permissions → Members: Read-only**, and a client secret.
+2. **First platform admin** (the one CLI step): `pnpm --filter @dshsa/control-api admin user add-admin <email>`. Cognito emails a temporary password.
+3. **Platform** tab: under **GitHub App**, enter the App ID, private key, Client ID and client secret; the slug is read from GitHub. Under **Teams**, create the team; under **Users**, invite its team admin.
+4. **Team setup** tab (team admin), guided by its **Onboarding checklist**:
+   - **Repositories**: **Install / configure the GitHub App**, then **Link installations**, then **Add** each repository. An installation on your own account, or on an organization you are an admin of, is linked right away; any other installation waits for a platform admin under **Platform → GitHub installations**.
+   - **Feishu / Lark**: the bot's App ID and App Secret, then the console's event configuration once the bot shows **Connected**. Each team uses its own app.
+   - **Chats**: add the bot to a group, @-mention it once, then pick the group's repository.
+   - **Users**: invite members and other team admins.
+5. **Settings → Policy** (per repository): the form lists who may originate work, with **Add from repo collaborators** and **Add all members of <chat>**, and sets the **Eval mode**. **Advanced (JSON)** edits the whole block.
 
-1. **Tenant**, then a **panel user**. Cognito emails a temporary password.
-2. **GitHub App**, once for the whole platform. `app-set` checks the App ID and key with GitHub (`GET /app`) and stores the App's real slug, so `--slug` is optional. Restart the host afterwards, because cells read the slug and key at start.
-3. **Cell**: one installed repository. The cell id is `<tenantId>--gh<repoId>`.
-4. **Feishu/Lark bot**, once per tenant. Use `--domain lark` for Lark. `read -rs` keeps the App Secret off screen and out of shell history.
-5. **Chat binding**: messages in the bound chat go to that cell. The panel's Settings page also lists and edits bindings.
-6. **Policy**: in the panel, **Settings → Configuration → Policy** is a JSON editor over `{ "rules": [...], "sources": {...} }`. Leave `rules` as they are, and list who may originate work under `sources`:
+**Eval mode** (`Off`, `Observe` or `Auto`; the default is `Observe`) only affects **inferred** messages, the ones that don't @-mention the agent and aren't direct messages. With `Observe`, they are evaluated and recorded as "would accept", and nothing else happens. With `Auto`, they can become Tickets. With `Off`, they are not evaluated. An explicit @-mention or direct message from someone on the list is evaluated in every mode.
 
-   ```json
-   "sources": {
-     "github": { "allowed": [{ "id": "<github-login>" }] },
-     "feishu": { "allowed": [{ "id": "ou_<open_id>", "name": "<optional display name>" }] }
-   }
-   ```
-
-   GitHub entries take `id` only. Feishu entries take an `open_id` (`ou_…`) and an optional `name`. The host validates the block on save.
-
-**Eval mode** (`Settings → Configuration → Eval`, `mode`: `off` | `observe` | `auto`; the default is `observe`) only affects **inferred** messages, the ones that don't @-mention the agent and aren't direct messages. With `observe`, they are evaluated and recorded as "would accept", and nothing else happens. With `auto`, they can become Tickets. With `off`, they are not evaluated. An explicit @-mention or direct message from an allowed person is evaluated in every mode.
+Every step also has a `dshsa-admin` command; see "Appendix: CLI fallback" in [docs/e2e-setup.md](docs/e2e-setup.md).
 
 ## Development
 
@@ -225,22 +211,23 @@ scripts/e2e/run.sh --strict --wait 60
 - **Ingress gate**: unsigned and forged webhooks are refused (`check:ingress`).
 
 Known gaps:
-- Rejected Triggers are not logged with their reason.
-- The panel's Policy page is a raw JSON editor.
 - A6 (an unauthorized or unaddressed message produces no Ticket) and A7 (destroy leaves nothing behind) are not yet automated end to end. `run.sh` has an A6 step; the live A2–A5 steps there are placeholders.
-- **Rotate the GitHub webhook secret before production.** Run `admin github app-set … --webhook-secret <new>` and set the same value in the App.
+- **Rotate the GitHub webhook secret before production.** Enter a new value under **Platform → GitHub App → Webhook secret (optional)** (with the private key), or run `admin github app-set … --webhook-secret <new>`, and set the same value in the App.
 
 ## Troubleshooting
 
-Host logs are in the CloudWatch log group `/dshsa/host`. The webhook Lambda logs to `/dshsa/ingress-github-webhook`, and panel-api to `/dshsa/panel-api`.
+Host logs are in the CloudWatch log group `/dshsa/host`. The webhook Lambda logs to `/dshsa/ingress-github-webhook`, panel-api to `/dshsa/panel-api`, and the panel's setup actions are audited in `/dshsa/panel-admin`.
 
 | Log message | Meaning |
 |---|---|
 | `feishu.health` | Connector state per tenant: `starting`, `ready` (detail `Listening for bot events`) or `error` with the cause |
-| `feishu.unrouted` | A message arrived from a chat that isn't bound. Its `chatId` is what `admin chat bind` needs |
+| `trigger not admitted` | The cell didn't admit a message. `reason` says why, for example `not_a_member` (the sender isn't on the Policy's list), `no_mention` (not addressed to the agent) or `not_human` (a bot not on the bot list); `at` is `intake` or `gate` |
+| `feishu.unrouted` | A message arrived from a chat that isn't bound. Bind it under **Team setup → Chats** (its `chatId` is what `admin chat bind` needs) |
 | `poison envelope dropped` | A cell-queue message was not a valid envelope and was deleted so it doesn't block the cell's FIFO group; the parse error is in the entry |
 | `worker event refused` | The domain refused a worker event (for example, a report on an ended Ticket). It is recorded and not retried |
 
-- **The slug is not the Client ID.** The App slug is the last part of `github.com/apps/<slug>`, the name people @-mention. The Client ID (`Iv…`) is something else. `admin github app-set` reads the slug from GitHub and refuses a wrong `--slug`.
-- **Webhook 401 / 503**: see the troubleshooting table in [docs/e2e-setup.md](docs/e2e-setup.md).
-- **Feishu console won't save long-connection mode**: run `admin feishu set` first, then wait for `feishu.health` `ready`.
+- **The slug is not the Client ID.** The App slug is the last part of `github.com/apps/<slug>`, the name people @-mention. The Client ID (`Iv…`) is something else. The panel and `admin github app-set` read the slug from GitHub.
+- **An installation waits for platform approval**: the reason is `not_own_account` (a user installation on someone else's account), `not_org_admin` (the user isn't an admin of the organization) or `membership_unavailable` (GitHub didn't confirm the org role, usually because the App lacks **Members: Read-only**). A platform admin approves it under **Platform → GitHub installations**.
+- **Belongs to another team** (`other_tenant`): another team linked the installation; a platform admin can release it. **Unlink** and **Release** answer `409 installation_in_use` while a repository still uses the installation: disable those repositories first.
+- **Webhook 401 / 503**, and more: see the troubleshooting table in [docs/e2e-setup.md](docs/e2e-setup.md).
+- **Feishu console won't save long-connection mode**: save the bot in **Team setup → Feishu / Lark** first, then wait for **Connected** (`feishu.health` `ready`).
