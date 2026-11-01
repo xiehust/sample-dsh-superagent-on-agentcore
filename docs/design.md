@@ -100,11 +100,12 @@ Response: always HTTP 200 (AgentCore turns any other status into 424 and drops t
 `{ "ok": true, "accepted": ["<inputId>"], "state": "idle|running|stopped" }` or `{ "ok": false, "error": "<code>", "message": "" }`.
 Semantics:
 - `start` is idempotent per assignmentId. It mounts the AP, prepares the repo on the first run, resumes the agent transcript if one exists, and runs the agent **asynchronously**; `/ping` reports `HealthyBusy` while it runs.
-- Cold start (platform V2): the platform drops the page cache before it snapshots a ready microVM, so the first mount would cold-read the mount helper, `efs-proxy` and their libraries from the lazily loaded snapshot disk. The gateway starts `pinner.py` before it listens on :8080; it maps the files listed by the image's build-time probe (`pin_manifest.py`, at most 128 MB, 5 s) so they stay in the snapshot, and is killed once the first mount ends. Best effort: a missing manifest or a pinner failure only logs a warning.
 - `deliver` queues inputs by `id` and deduplicates them; the agent picks them up at its next step boundary.
 - `stop` cancels the current turn and keeps the inbox.
 - `status` returns the state without side effects.
 - `config` is sent on `start` and on every `deliver`, because prompts may change between turns.
+
+**Cold start (platform V2).** The platform is expected, but not yet verified on a live runtime, to drop the page cache before it snapshots a ready microVM; AWS documents only that the snapshot is taken once `/ping` is healthy. If it does, the first mount after a restore cold-reads the mount helper, `efs-proxy`, botocore and their libraries from the lazily loaded snapshot disk. The gateway therefore starts `pinner.py` before it listens on :8080. The pinner maps the files listed by the image's build-time probe (`pin_manifest.py`; at most 128 MB, within 5 s) so they stay in the snapshot, and the gateway kills it once the first mount ends. This is best effort: a missing manifest or any pinner failure only logs a warning. To check it on a deploy, compare the `mount_ms` of the `mounted` log line on a fresh session's first start with the previous image (14–35 s), and read the `pinned` line (`files`, `bytes`, `pin_ms`).
 
 ### 4.5 Worker → control plane: worker-api (private API GW, Bearer ticket token)
 

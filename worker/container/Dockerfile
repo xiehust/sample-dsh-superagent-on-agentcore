@@ -36,6 +36,6 @@ RUN v="${DSHSA_WORKER_VERSION}"; \
 ENV PYTHONPATH=/app PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Last: list the files a first request reads, probed in this finished image (pin_manifest.py). The gateway pins them before
 # it opens :8080 so they survive the page-cache drop before the V2 snapshot (pinner.py). Nothing may replace them afterwards.
-RUN python3.12 -I /app/pin_manifest.py /app/pin-manifest.txt && chmod 644 /app/pin-manifest.txt
+RUN python3.12 -E -s /app/pin_manifest.py /app/pin-manifest.txt && chmod 644 /app/pin-manifest.txt
 EXPOSE 8080
 ENTRYPOINT ["/app/entrypoint.sh"]

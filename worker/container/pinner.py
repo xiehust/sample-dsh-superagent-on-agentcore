@@ -1,11 +1,12 @@
 """Page pinner: keep the first request's files in the AgentCore Runtime V2 snapshot.
 
-V2 drops the page cache before it snapshots a ready microVM, so the mount helper, efs-proxy, the agent's tools and their
-libraries would be cold-read from the lazily loaded snapshot disk on the first request after a restore (seconds to tens
-of seconds for `mount -t s3files`). Pages mapped by a live process survive the drop, so the gateway starts this process
-before it listens on :8080 (the platform snapshots only after /ping answers 200): it reads every file of the build-time
-manifest (pin_manifest.py) into the page cache, maps it MAP_SHARED|MAP_POPULATE, prints one JSON line and holds the
-mappings until it is killed or its stdin closes. The gateway kills it once the first mount has finished.
+V2 is expected (unverified on a live runtime) to drop the page cache before it snapshots a ready microVM, so the mount
+helper, efs-proxy, the agent's tools and their libraries would be cold-read from the lazily loaded snapshot disk on the
+first request after a restore (seconds to tens of seconds for `mount -t s3files`). Pages mapped by a live process
+survive the drop, so the gateway starts this process before it listens on :8080 (the platform snapshots only after /ping
+answers 200): it reads every file of the build-time manifest (pin_manifest.py) into the page cache, maps it
+MAP_SHARED|MAP_POPULATE, prints one JSON line and holds the mappings until it is killed or its stdin closes. The gateway
+kills it once the first mount has finished.
 
 Best effort throughout: a missing manifest or any pinner failure is a warning and the gateway listens anyway.
 Child: `python3.12 -I pinner.py <manifest>`. Parent: `Pinner.start(manifest, log)`. Standard library only.
@@ -16,6 +17,7 @@ import json
 import mmap
 import os
 import select
+import stat
 import subprocess
 import sys
 import time
@@ -37,12 +39,14 @@ def pin(paths: list[str], deadline: float, max_bytes: int = MAX_BYTES) -> tuple[
         if time.monotonic() >= deadline:
             break
         try:
-            fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC)
+            # No symlinks (the manifest holds resolved paths) and no blocking open: a FIFO or device is skipped, never waited on.
+            fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK)
         except OSError:
             continue
         try:
-            size = os.fstat(fd).st_size
-            if size == 0 or total + size > max_bytes:
+            st = os.fstat(fd)
+            size = st.st_size
+            if not stat.S_ISREG(st.st_mode) or size == 0 or total + size > max_bytes:
                 continue
             off = 0
             while off < size:  # read first: a disk error is a plain OSError here, not a SIGBUS in the mapping

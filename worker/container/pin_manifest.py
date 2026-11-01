@@ -10,7 +10,7 @@ images, so a hand-written list would go stale. Sources:
   - `ldd` of every ELF found above (executables and extension modules);
   - configuration and CA files opened at run time.
 Deduplicated by inode. The Claude CLI the SDK spawns is left out: it is larger than the pinner's whole budget.
-Usage: python3.12 -I pin_manifest.py <output>
+Usage: python3.12 -E -s pin_manifest.py <output> (not -I: it implies -P, and this script imports pinner from its own directory)
 """
 from __future__ import annotations
 
@@ -24,6 +24,10 @@ import sys
 from pinner import MAX_BYTES
 
 SEARCH_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# The target interpreter runs as the real program does (`#!/usr/bin/python3`, no flags), except that the environment is
+# ignored. Never -I or -s: on AL2023 they also drop /usr/local/lib/python3.X/site-packages, where botocore (imported by the
+# mount helper's efs_utils_common) lives, and the manifest would silently miss it.
+PROBE_FLAGS = ["-E"]
 
 # New processes in the order a first request starts them: the mount (gateway, root), then the agent's first repository work.
 # The gateway and the agent themselves are not probed: they import before the port opens, and their loaded extension
@@ -106,7 +110,7 @@ def ldd(path: str) -> list[str]:
 def python_files(interpreter: str, script: str) -> list[str]:
     name = os.path.basename(interpreter)
     try:
-        r = subprocess.run([interpreter, "-I", "-c", PY_PROBE, script, *WARMUPS.get(name, [])], capture_output=True, text=True, timeout=300,
+        r = subprocess.run([interpreter, *PROBE_FLAGS, "-c", PY_PROBE, script, *WARMUPS.get(name, [])], capture_output=True, text=True, timeout=300,
                            env={"PATH": SEARCH_PATH, "HOME": "/root"})
         return json.loads(r.stdout.strip().splitlines()[-1]) if r.returncode == 0 and r.stdout.strip() else []
     except (OSError, subprocess.SubprocessError, ValueError, IndexError):

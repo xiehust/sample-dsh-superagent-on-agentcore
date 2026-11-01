@@ -1,7 +1,11 @@
 """Page pinner (V2 snapshot page-cache drop): the build-time manifest, the pin loop, the gateway's start and release."""
 import json
 import os
+import re
+import shutil
+import subprocess
 import sys
+import threading
 import time
 
 import pin_manifest
@@ -23,6 +27,20 @@ def test_pin_maps_whole_files_within_the_budget(tmp_path):
     maps, total = pinner.pin([a, str(tmp_path / "missing"), empty, big, c], time.monotonic() + 5, max_bytes=10000)
     # big would exceed the cap: skipped whole, not partially pinned; later files still fit.
     assert total == 8000 and [len(m) for m in maps] == [5000, 3000] and maps[0][:3] == b"aaa"
+
+
+def test_pin_skips_symlinks_fifos_and_devices_without_blocking(tmp_path):
+    real = write(tmp_path / "real", b"r" * 100)
+    os.symlink(real, tmp_path / "link")
+    os.mkfifo(tmp_path / "fifo")  # a blocking open would wait for a writer forever
+    result = []
+    worker = threading.Thread(target=lambda: result.append(pinner.pin([str(tmp_path / "link"), str(tmp_path / "fifo"), "/dev/null", real],
+                                                                      time.monotonic() + 5)), daemon=True)
+    worker.start()
+    worker.join(2)  # a regression to a blocking open fails here instead of hanging the suite
+    assert result, "pin() blocked on a FIFO"
+    maps, total = result[0]
+    assert (len(maps), total) == (1, 100)
 
 
 def test_pin_stops_at_the_deadline(tmp_path):
@@ -71,6 +89,21 @@ def test_bad_or_slow_child_is_killed_and_the_gateway_goes_on(tmp_path, code):
     logs, started = [], time.monotonic()
     assert pinner.Pinner.start(str(manifest), lambda event, **f: logs.append((event, f)), wait_s=1, python=str(fake)) is None
     assert time.monotonic() - started < 4 and logs[0][0] == "pin_failed" and logs[0][1]["level"] == "WARNING"
+
+
+def test_an_unexpected_pinner_error_never_keeps_the_gateway_from_listening(monkeypatch):
+    import gateway
+
+    def explode(*_a, **_k):
+        raise MemoryError("boom")
+    logs = []
+    monkeypatch.setattr(gateway, "MOUNT_MODE", "s3files")
+    monkeypatch.setattr(gateway.Pinner, "start", explode)
+    monkeypatch.setattr(gateway, "log", lambda event, **f: logs.append((event, f)))
+    assert gateway.start_pinner() is None
+    assert logs == [("pin_failed", {"level": "WARNING", "reason": "MemoryError: boom"})]
+    monkeypatch.setattr(gateway, "MOUNT_MODE", "local")
+    assert gateway.start_pinner() is None and len(logs) == 1
 
 
 async def test_first_mount_releases_the_pin_even_when_it_fails(monkeypatch):
@@ -142,3 +175,31 @@ def test_manifest_main_writes_one_path_per_line(tmp_path, monkeypatch, capsys):
     pin_manifest.main(["pin_manifest.py", str(tmp_path / "out.txt")])
     assert (tmp_path / "out.txt").read_text() == conf + "\n"
     assert json.loads(capsys.readouterr().out)["files"] == 1
+
+
+def test_probe_runs_the_target_interpreter_without_isolation_flags(tmp_path, monkeypatch):
+    """-I/-s drop /usr/local site-packages on AL2023, where the mount helper's botocore lives."""
+    calls = []
+
+    def run(argv, **_kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout="[]\n", stderr="")
+    monkeypatch.setattr(pin_manifest.subprocess, "run", run)
+    pin_manifest.python_files("/usr/bin/python3", "/usr/sbin/mount.s3files")
+    flags = calls[0][1:calls[0].index("-c")]
+    assert flags == ["-E"] and not {"-I", "-s"} & set(flags)
+
+
+def test_manifest_runs_exactly_as_the_dockerfile_runs_it(tmp_path):
+    """The Dockerfile's flags, on a copy of the script next to its pinner import (no PYTHONPATH, as in the image build)."""
+    here = os.path.dirname(pin_manifest.__file__)
+    dockerfile = open(os.path.join(here, "Dockerfile")).read()
+    flags = re.search(r"^RUN python3\.12 ((?:-\S+ )*)/app/pin_manifest\.py ", dockerfile, re.M)
+    assert flags, "the Dockerfile no longer runs pin_manifest.py"
+    for name in ("pin_manifest.py", "pinner.py"):
+        shutil.copy(os.path.join(here, name), tmp_path / name)
+    out = tmp_path / "manifest.txt"
+    r = subprocess.run([sys.executable, *flags.group(1).split(), str(tmp_path / "pin_manifest.py"), str(out)], capture_output=True, text=True,
+                       timeout=600, cwd=tmp_path, env={"PATH": os.environ.get("PATH", "")})
+    assert r.returncode == 0, r.stderr[-1000:]
+    assert json.loads(r.stdout.strip().splitlines()[-1])["component"] == "pin_manifest" and out.exists()

@@ -125,18 +125,18 @@ class S3FilesMounter:
             t1 = time.monotonic()
             await asyncio.get_running_loop().run_in_executor(None, self._mount, target["fileSystemId"], target["accessPointId"])
         finally:
-            self.release_pin()
+            await self.release_pin()
         self.target = target
         log("mounted", ticketKey=target["ticketKey"], accessPointId=target["accessPointId"], mint_ms=int((t1 - t0) * 1000),
             mount_ms=int((time.monotonic() - t1) * 1000))
         asyncio.get_running_loop().create_task(self._refresh_loop())
         return target
 
-    def release_pin(self) -> None:
+    async def release_pin(self) -> None:
         """After the first mount, success or not: the pages it needed are read, the pins would only hold memory."""
         pinner, self.pinner = self.pinner, None
         if pinner:
-            pinner.release()
+            await asyncio.to_thread(pinner.release)  # kill + a bounded wait: off the event loop, so /ping never stalls on it
             log("pin_released")
 
     def _seconds_until_refresh(self) -> float:
@@ -314,12 +314,22 @@ async def watch_loop_lag(every_s: float = 1.0, warn_s: float = 2.0) -> None:
             log("loop_lag", seconds=round(lag, 1))
 
 
+def start_pinner() -> Pinner | None:
+    """Best effort: no pinner failure may keep the gateway from listening on :8080."""
+    if MOUNT_MODE == "local":
+        return None
+    try:
+        return Pinner.start(os.environ.get("PIN_MANIFEST", MANIFEST), log)
+    except Exception as error:  # noqa: BLE001
+        log("pin_failed", level="WARNING", reason=f"{type(error).__name__}: {str(error)[:200]}")
+        return None
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     assert os.getuid() == 0 or MOUNT_MODE == "local", "gateway must run as root (mount + credential file)"
-    # V2 snapshots once /ping answers, after dropping the page cache: pin the first mount's files before the port opens.
-    pinner = Pinner.start(os.environ.get("PIN_MANIFEST", MANIFEST), log) if MOUNT_MODE != "local" else None
-    web.run_app(build_app(pinner), host="0.0.0.0", port=8080, access_log=None)  # noqa: S104 - AgentCore contract port
+    # V2 snapshots once /ping answers (and is expected to drop the page cache first): pin the first mount's files before the port opens.
+    web.run_app(build_app(start_pinner()), host="0.0.0.0", port=8080, access_log=None)  # noqa: S104 - AgentCore contract port
 
 
 if __name__ == "__main__":
