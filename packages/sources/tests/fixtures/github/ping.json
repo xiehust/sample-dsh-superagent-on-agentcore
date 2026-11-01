@@ -1,0 +1,20 @@
+{
+ "zen": "Keep it logically awesome.",
+ "hook_id": 1,
+ "hook": {
+  "type": "App"
+ },
+ "repository": {
+  "id": 812345,
+  "full_name": "acme/widgets",
+  "name": "widgets",
+  "owner": {
+   "login": "acme",
+   "type": "Organization"
+  },
+  "default_branch": "main"
+ },
+ "installation": {
+  "id": 4242
+ }
+}

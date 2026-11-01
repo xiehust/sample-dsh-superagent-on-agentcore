@@ -1,0 +1,278 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1110 1140" width="1110" height="1140" data-generator="fireworks-tech-graph" data-schema-version="1" data-text-metrics="heuristic-v1" data-style-id="1" data-visual-theme="Flat Icon" data-diagram-type="architecture" data-motion-scene="" data-semantic-profile="generic" data-semantic-valid="true" data-quality-profile="standard" data-max-bends-per-edge="12" data-max-total-bends="100" data-max-route-stretch="5.0" data-max-bridged-crossings="8" data-min-node-gap="0.0" data-min-container-gutter="0.0" data-min-label-clearance="2.0" data-min-segment-length="0.0">
+  <defs>
+    <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    </marker>
+    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowE" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+    </marker>
+    <marker id="arrowF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+    </marker>
+    <marker id="arrowH" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+    <filter id="shadowSoft" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowGlass" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.28"/>
+    </filter>
+    <style>
+    text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; }
+    .title { font-size: 30px; font-weight: 700; fill: #111827; }
+    .subtitle { font-size: 14px; font-weight: 500; fill: #6b7280; }
+    .section { font-size: 13px; font-weight: 700; fill: #2563eb; letter-spacing: 1.4px; }
+    .section-sub { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .node-title { font-weight: 700; fill: #111827; }
+    .node-sub { font-weight: 500; fill: #6b7280; }
+    .node-type { font-size: 12px; font-weight: 700; fill: #64748b; letter-spacing: 0.08em; }
+    .arrow-label { font-size: 12px; font-weight: 600; fill: #6b7280; }
+    .legend { font-size: 12px; font-weight: 500; fill: #6b7280; }
+    .footnote { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .metric-label { font-size: 8.5px; font-weight: 700; fill: #64748b; text-transform: uppercase; }
+    .metric-value { font-size: 9.5px; font-weight: 700; fill: #111827; }
+    </style>
+  </defs>
+  <rect data-graph-role="background" width="1110.0" height="1140.0" fill="#ffffff"/>
+  <text x="555.0" y="56" text-anchor="middle" class="title">dshsa architecture</text>
+  <text x="555.0" y="82" text-anchor="middle" class="subtitle">GitHub and Feishu/Lark messages become Tickets worked by Claude Agent SDK workers on AgentCore Runtime</text>
+  <g id="host" data-graph-role="container" data-container-id="host" data-semantic-role="boundary" data-graph-bounds="20,400,1060,690">
+  <rect data-graph-role="container" x="20.0" y="400.0" width="1040.0" height="290.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5"/>
+  <text x="38.0" y="424.0" class="section">DSHSA-HOST</text>
+    <rect id="host-header" data-graph-role="reserved" data-reserved-kind="container-header" x="28" y="406" width="105.4" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="cell" data-graph-role="container" data-container-id="cell" data-semantic-role="boundary" data-graph-bounds="280,440,800,670">
+  <rect data-graph-role="container" x="280.0" y="440.0" width="520.0" height="230.0" rx="16.0" fill="#fff7f7" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text x="298.0" y="464.0" class="section">TENANT CELL</text>
+    <rect id="cell-header" data-graph-role="reserved" data-reserved-kind="container-header" x="288" y="446" width="110.08" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="microvm" data-graph-role="container" data-container-id="microvm" data-semantic-role="boundary" data-graph-bounds="280,830,800,1020">
+  <rect data-graph-role="container" x="280.0" y="830.0" width="520.0" height="190.0" rx="16.0" fill="#fbf7ff" stroke="#9333ea" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text x="298.0" y="854.0" class="section">WORKER MICROVM</text>
+    <rect id="microvm-header" data-graph-role="reserved" data-reserved-kind="container-header" x="288" y="836" width="138.68" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="apiso" data-graph-role="container" data-container-id="apiso" data-semantic-role="boundary" data-graph-bounds="820,830,1060,1020">
+  <rect data-graph-role="container" x="820.0" y="830.0" width="240.0" height="190.0" rx="16.0" fill="#f6fdf8" stroke="#16a34a" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text x="838.0" y="854.0" class="section">AP ISOLATION</text>
+    <rect id="apiso-header" data-graph-role="reserved" data-reserved-kind="container-header" x="828" y="836" width="110.86" height="30" fill="none" stroke="none"/>
+  </g>
+  <path id="e-connector-sqs" data-graph-role="edge" data-edge-id="e-connector-sqs" data-source="connector" data-target="sqs" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="2" data-route-stretch="1.0" data-bridges="" d="M 240,502 L 252,502 L 252,321 L 300,321" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="e-provision" data-graph-role="edge" data-edge-id="e-provision" data-source="executor" data-target="provisioner" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="1" data-route-stretch="1.0" data-bridges="" d="M 780,622 L 935,622 L 935,730" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-invoke" data-graph-role="edge" data-edge-id="e-invoke" data-source="executor" data-target="gateway" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="3" data-route-stretch="1.157" data-bridges="" d="M 570,622 L 540,622 L 540,880 L 675,880 L 675,900" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-create-ap" data-graph-role="edge" data-edge-id="e-create-ap" data-source="provisioner" data-target="ap" data-edge-kind="flow" data-topic-id="" data-flow="write" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="2" data-route-stretch="1.413" data-bridges="" d="M 1040,760 L 1085,760 L 1085,978 L 1040,978" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowB)"/>
+  <path id="e-gw-workerapi" data-graph-role="edge" data-edge-id="e-gw-workerapi" data-source="gateway" data-target="workerapi" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="2" data-route-stretch="1.111" data-bridges="" d="M 675,970 L 675,1000 L 670,1000 L 140,1000 L 140,964" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="e-workerapi-sqs" data-graph-role="edge" data-edge-id="e-workerapi-sqs" data-source="workerapi" data-target="sqs" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="2" data-route-stretch="1.0" data-bridges="" d="M 240,932 L 264,932 L 264,339 L 300,339" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="e-webhook" data-graph-role="edge" data-edge-id="e-webhook" data-source="github" data-target="ingress" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 405,156 L 405,200" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="e-ingress-sqs" data-graph-role="edge" data-edge-id="e-ingress-sqs" data-source="ingress" data-target="sqs" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 405,260 L 405,300" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="e-feishu" data-graph-role="edge" data-edge-id="e-feishu" data-source="connector" data-target="feishu" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 140,470 L 140,156" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="e-sqs-engine" data-graph-role="edge" data-edge-id="e-sqs-engine" data-source="sqs" data-target="engine" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 405,360 L 405,490" fill="none" stroke="#f97316" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="e-eval" data-graph-role="edge" data-edge-id="e-eval" data-source="engine" data-target="assessor" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 510,522 L 570,522" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-bedrock" data-graph-role="edge" data-edge-id="e-bedrock" data-source="assessor" data-target="bedrock" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 675,490 L 675,310" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-litestream" data-graph-role="edge" data-edge-id="e-litestream" data-source="engine" data-target="state" data-edge-kind="flow" data-topic-id="" data-flow="write" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 405,554 L 405,730" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowB)"/>
+  <path id="e-signin" data-graph-role="edge" data-edge-id="e-signin" data-source="users" data-target="cloudfront" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 935,162 L 935,200" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-jwt" data-graph-role="edge" data-edge-id="e-jwt" data-source="cloudfront" data-target="panelapi" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 935,260 L 935,300" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-panel-host" data-graph-role="edge" data-edge-id="e-panel-host" data-source="panelapi" data-target="internal" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 935,360 L 935,490" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-internal-cell" data-graph-role="edge" data-edge-id="e-internal-cell" data-source="internal" data-target="assessor" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 830,522 L 780,522" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-kms" data-graph-role="edge" data-edge-id="e-kms" data-source="executor" data-target="kms" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 675,650 L 675,730" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="e-proxy" data-graph-role="edge" data-edge-id="e-proxy" data-source="agent" data-target="gateway" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 510,935 L 570,935" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <path id="e-broker" data-graph-role="edge" data-edge-id="e-broker" data-source="gateway" data-target="broker" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="2" data-route-stretch="1.0" data-bridges="" d="M 780,926 L 796.5,926 L 796.5,903 L 840,903" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="e-mount" data-graph-role="edge" data-edge-id="e-mount" data-source="gateway" data-target="ap" data-edge-kind="flow" data-topic-id="" data-flow="write" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="2" data-route-stretch="1.0" data-bridges="" d="M 780,944 L 796.5,944 L 796.5,978 L 840,978" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowB)"/>
+  <g id="node-feishu" data-graph-role="node" data-node-id="feishu" data-semantic-role="speech" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="40,100,240,156">
+  <path d="M 50.0 100.0 L 230.0 100.0 Q 240.0 100.0 240.0 110.0 L 240.0 146.0 Q 240.0 156.0 230.0 156.0 L 66.0 156.0 L 52.0 174.0 L 56.0 156.0 L 50.0 156.0 Q 40.0 156.0 40.0 146.0 L 40.0 110.0 Q 40.0 100.0 50.0 100.0 Z" fill="#ecfeff" stroke="#0891b2" stroke-width="2.0"/>
+  <text data-text-role="title" data-full-text="Feishu / Lark" data-text-max-width="176.0" x="140.0" y="128.0" text-anchor="middle" class="node-title" font-size="18">Feishu / Lark</text>
+  <text data-text-role="subtitle" data-full-text="bot in group chats" data-text-max-width="176.0" x="140.0" y="150.0" text-anchor="middle" class="node-sub" font-size="12">bot in group chats</text>
+  </g>
+  <g id="node-github" data-graph-role="node" data-node-id="github" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="300,100,510,156">
+  <rect x="300.0" y="100.0" width="210.0" height="56.0" rx="10.0" fill="#f8fafc" stroke="#334155" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="GitHub App" data-text-max-width="186.0" x="405.0" y="128.0" text-anchor="middle" class="node-title" font-size="18">GitHub App</text>
+  <text data-text-role="subtitle" data-full-text="Issues · PRs · comments" data-text-max-width="186.0" x="405.0" y="150.0" text-anchor="middle" class="node-sub" font-size="12">Issues · PRs · comments</text>
+  </g>
+  <g id="node-users" data-graph-role="node" data-node-id="users" data-semantic-role="user_avatar" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="830,90,1040,162">
+  <rect x="830.0" y="90.0" width="210.0" height="72.0" rx="10.0" fill="#eff6ff" stroke="#3b82f6" stroke-width="2.0"/>
+  <circle cx="856.0" cy="126.0" r="18" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.6"/>
+  <circle cx="856.0" cy="120.0" r="5" fill="#3b82f6"/>
+  <path d="M 846.0 137.0 Q 856.0 128.0 866.0 137.0" fill="none" stroke="#3b82f6" stroke-width="2"/>
+  <text data-text-role="title" data-full-text="Team members" data-text-max-width="134.0" x="894.0" y="132.0" text-anchor="start" class="node-title" font-size="18">Team members</text>
+  <text data-text-role="subtitle" data-full-text="panel in the browser" data-text-max-width="134.0" x="894.0" y="154.0" text-anchor="start" class="node-sub" font-size="11.9">panel in the browser</text>
+  </g>
+  <g id="node-ingress" data-graph-role="node" data-node-id="ingress" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="300,200,510,260">
+  <rect x="300.0" y="200.0" width="210.0" height="60.0" rx="10.0" fill="#fff7ed" stroke="#f97316" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="dshsa-ingress" data-text-max-width="186.0" x="405.0" y="230.0" text-anchor="middle" class="node-title" font-size="18">dshsa-ingress</text>
+  <text data-text-role="subtitle" data-full-text="API GW + webhook Lambda · HMAC" data-text-max-width="186.0" x="405.0" y="252.0" text-anchor="middle" class="node-sub" font-size="10.56">API GW + webhook Lambda · HMAC</text>
+  </g>
+  <g id="node-bedrock" data-graph-role="node" data-node-id="bedrock" data-semantic-role="double_rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="570,250,780,310">
+  <rect x="570.0" y="250.0" width="210.0" height="60.0" rx="10.0" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2.0"/>
+  <rect x="576.0" y="256.0" width="198.0" height="48.0" rx="7.0" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity="0.65"/>
+  <text data-text-role="title" data-full-text="Amazon Bedrock" data-text-max-width="178.0" x="675.0" y="280.0" text-anchor="middle" class="node-title" font-size="18">Amazon Bedrock</text>
+  <text data-text-role="subtitle" data-full-text="Claude · eval and reply" data-text-max-width="178.0" x="675.0" y="302.0" text-anchor="middle" class="node-sub" font-size="12">Claude · eval and reply</text>
+  </g>
+  <g id="node-cloudfront" data-graph-role="node" data-node-id="cloudfront" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="830,200,1040,260">
+  <rect x="830.0" y="200.0" width="210.0" height="60.0" rx="10.0" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="CloudFront + Cognito" data-text-max-width="186.0" x="935.0" y="230.0" text-anchor="middle" class="node-title" font-size="16.18">CloudFront + Cognito</text>
+  <text data-text-role="subtitle" data-full-text="panel SPA · sign-in" data-text-max-width="186.0" x="935.0" y="252.0" text-anchor="middle" class="node-sub" font-size="12">panel SPA · sign-in</text>
+  </g>
+  <g id="node-sqs" data-graph-role="node" data-node-id="sqs" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="300,300,510,360">
+  <rect x="300.0" y="300.0" width="210.0" height="60.0" rx="10.0" fill="#fff7ed" stroke="#f97316" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="SQS FIFO per cell" data-text-max-width="186.0" x="405.0" y="330.0" text-anchor="middle" class="node-title" font-size="18">SQS FIFO per cell</text>
+  <text data-text-role="subtitle" data-full-text="dshsa-cell-&lt;cellId&gt;.fifo" data-text-max-width="186.0" x="405.0" y="352.0" text-anchor="middle" class="node-sub" font-size="12">dshsa-cell-&lt;cellId&gt;.fifo</text>
+  </g>
+  <g id="node-panelapi" data-graph-role="node" data-node-id="panelapi" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="830,300,1040,360">
+  <rect x="830.0" y="300.0" width="210.0" height="60.0" rx="10.0" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="panel-api" data-text-max-width="186.0" x="935.0" y="330.0" text-anchor="middle" class="node-title" font-size="18">panel-api</text>
+  <text data-text-role="subtitle" data-full-text="JWT authorizer + Lambda" data-text-max-width="186.0" x="935.0" y="352.0" text-anchor="middle" class="node-sub" font-size="12">JWT authorizer + Lambda</text>
+  </g>
+  <g id="node-connector" data-graph-role="node" data-node-id="connector" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="40,470,240,534">
+  <rect x="40.0" y="470.0" width="200.0" height="64.0" rx="10.0" fill="#ecfeff" stroke="#0891b2" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="Feishu Connector" data-text-max-width="176.0" x="140.0" y="502.0" text-anchor="middle" class="node-title" font-size="18">Feishu Connector</text>
+  <text data-text-role="subtitle" data-full-text="per tenant · WebSocket" data-text-max-width="176.0" x="140.0" y="524.0" text-anchor="middle" class="node-sub" font-size="12">per tenant · WebSocket</text>
+  </g>
+  <g id="node-engine" data-graph-role="node" data-node-id="engine" data-semantic-role="double_rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="300,490,510,554">
+  <rect x="300.0" y="490.0" width="210.0" height="64.0" rx="10.0" fill="#ffffff" stroke="#dc2626" stroke-width="2.0"/>
+  <rect x="306.0" y="496.0" width="198.0" height="52.0" rx="7.0" fill="none" stroke="#dc2626" stroke-width="1.2" opacity="0.65"/>
+  <text data-text-role="title" data-full-text="DSH Engine + SQLite" data-text-max-width="178.0" x="405.0" y="522.0" text-anchor="middle" class="node-title" font-size="16.74">DSH Engine + SQLite</text>
+  <text data-text-role="subtitle" data-full-text="one per (tenant, repo)" data-text-max-width="178.0" x="405.0" y="544.0" text-anchor="middle" class="node-sub" font-size="12">one per (tenant, repo)</text>
+  </g>
+  <g id="node-assessor" data-graph-role="node" data-node-id="assessor" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="570,490,780,554">
+  <rect x="570.0" y="490.0" width="210.0" height="64.0" rx="10.0" fill="#ffffff" stroke="#dc2626" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="Assessor / Replier" data-text-max-width="186.0" x="675.0" y="522.0" text-anchor="middle" class="node-title" font-size="18">Assessor / Replier</text>
+  <text data-text-role="subtitle" data-full-text="replies via the Outbox" data-text-max-width="186.0" x="675.0" y="544.0" text-anchor="middle" class="node-sub" font-size="12">replies via the Outbox</text>
+  </g>
+  <g id="node-executor" data-graph-role="node" data-node-id="executor" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="570,594,780,650">
+  <rect x="570.0" y="594.0" width="210.0" height="56.0" rx="10.0" fill="#ffffff" stroke="#dc2626" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="AgentCore Executor" data-text-max-width="186.0" x="675.0" y="622.0" text-anchor="middle" class="node-title" font-size="16.85">AgentCore Executor</text>
+  <text data-text-role="subtitle" data-full-text="starts and resumes workers" data-text-max-width="186.0" x="675.0" y="644.0" text-anchor="middle" class="node-sub" font-size="11.94">starts and resumes workers</text>
+  </g>
+  <g id="node-internal" data-graph-role="node" data-node-id="internal" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="830,490,1040,554">
+  <rect x="830.0" y="490.0" width="210.0" height="64.0" rx="10.0" fill="#ffffff" stroke="#64748b" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="internal HTTP :8080" data-text-max-width="186.0" x="935.0" y="522.0" text-anchor="middle" class="node-title" font-size="17.57">internal HTTP :8080</text>
+  <text data-text-role="subtitle" data-full-text="IAM caller proof (STS)" data-text-max-width="186.0" x="935.0" y="544.0" text-anchor="middle" class="node-sub" font-size="12">IAM caller proof (STS)</text>
+  </g>
+  <g id="node-state" data-graph-role="node" data-node-id="state" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="300,730,510,790">
+  <rect x="300.0" y="730.0" width="210.0" height="60.0" rx="10.0" fill="#ecfdf5" stroke="#10b981" stroke-width="1.8" filter="url(#shadowSoft)"/>
+  <text data-text-role="title" data-full-text="S3 state bucket" data-text-max-width="186.0" x="405.0" y="760.0" text-anchor="middle" class="node-title" font-size="18">S3 state bucket</text>
+  <text data-text-role="subtitle" data-full-text="Litestream replicas" data-text-max-width="186.0" x="405.0" y="782.0" text-anchor="middle" class="node-sub" font-size="12">Litestream replicas</text>
+  </g>
+  <g id="node-provisioner" data-graph-role="node" data-node-id="provisioner" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="830,730,1040,790">
+  <rect x="830.0" y="730.0" width="210.0" height="60.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="provisioner Lambda" data-text-max-width="186.0" x="935.0" y="760.0" text-anchor="middle" class="node-title" font-size="17.75">provisioner Lambda</text>
+  <text data-text-role="subtitle" data-full-text="per-ticket access point" data-text-max-width="186.0" x="935.0" y="782.0" text-anchor="middle" class="node-sub" font-size="12">per-ticket access point</text>
+  </g>
+  <g id="node-kms" data-graph-role="node" data-node-id="kms" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="570,730,780,790">
+  <rect x="570.0" y="730.0" width="210.0" height="60.0" rx="10.0" fill="#fefce8" stroke="#ca8a04" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="KMS" data-text-max-width="186.0" x="675.0" y="760.0" text-anchor="middle" class="node-title" font-size="18">KMS</text>
+  <text data-text-role="subtitle" data-full-text="ES256 ticket token" data-text-max-width="186.0" x="675.0" y="782.0" text-anchor="middle" class="node-sub" font-size="12">ES256 ticket token</text>
+  </g>
+  <g id="node-workerapi" data-graph-role="node" data-node-id="workerapi" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="40,900,240,964">
+  <rect x="40.0" y="900.0" width="200.0" height="64.0" rx="10.0" fill="#faf5ff" stroke="#9333ea" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="worker-api" data-text-max-width="176.0" x="140.0" y="932.0" text-anchor="middle" class="node-title" font-size="18">worker-api</text>
+  <text data-text-role="subtitle" data-full-text="private API GW · ticket token" data-text-max-width="176.0" x="140.0" y="954.0" text-anchor="middle" class="node-sub" font-size="10.73">private API GW · ticket token</text>
+  </g>
+  <g id="node-agent" data-graph-role="node" data-node-id="agent" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="300,900,510,970">
+  <rect x="300.0" y="900.0" width="210.0" height="70.0" rx="10.0" fill="#faf5ff" stroke="#9333ea" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="agent (uid 1000)" data-text-max-width="186.0" x="405.0" y="935.0" text-anchor="middle" class="node-title" font-size="18">agent (uid 1000)</text>
+  <text data-text-role="subtitle" data-full-text="Claude Agent SDK · repo on disk" data-text-max-width="186.0" x="405.0" y="957.0" text-anchor="middle" class="node-sub" font-size="10.67">Claude Agent SDK · repo on disk</text>
+  </g>
+  <g id="node-gateway" data-graph-role="node" data-node-id="gateway" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="570,900,780,970">
+  <rect x="570.0" y="900.0" width="210.0" height="70.0" rx="10.0" fill="#faf5ff" stroke="#9333ea" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="gateway (root)" data-text-max-width="186.0" x="675.0" y="935.0" text-anchor="middle" class="node-title" font-size="18">gateway (root)</text>
+  <text data-text-role="subtitle" data-full-text="holds ticket token · mounts AP" data-text-max-width="186.0" x="675.0" y="957.0" text-anchor="middle" class="node-sub" font-size="10.91">holds ticket token · mounts AP</text>
+  </g>
+  <g id="node-broker" data-graph-role="node" data-node-id="broker" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="840,875,1040,931">
+  <rect x="840.0" y="875.0" width="200.0" height="56.0" rx="10.0" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>
+  <text data-text-role="title" data-full-text="broker Lambda" data-text-max-width="176.0" x="940.0" y="903.0" text-anchor="middle" class="node-title" font-size="18">broker Lambda</text>
+  <text data-text-role="subtitle" data-full-text="STS + session policy" data-text-max-width="176.0" x="940.0" y="925.0" text-anchor="middle" class="node-sub" font-size="12">STS + session policy</text>
+  </g>
+  <g id="node-ap" data-graph-role="node" data-node-id="ap" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="840,950,1040,1006">
+  <rect x="840.0" y="950.0" width="200.0" height="56.0" rx="10.0" fill="#ecfdf5" stroke="#10b981" stroke-width="1.8" filter="url(#shadowSoft)"/>
+  <text data-text-role="title" data-full-text="S3 Files AP per ticket" data-text-max-width="176.0" x="940.0" y="978.0" text-anchor="middle" class="node-title" font-size="14.68">S3 Files AP per ticket</text>
+  <text data-text-role="subtitle" data-full-text="/mnt/work · repo.bundle" data-text-max-width="176.0" x="940.0" y="1000.0" text-anchor="middle" class="node-sub" font-size="12">/mnt/work · repo.bundle</text>
+  </g>
+  <g id="e-webhook-label" data-graph-role="label" data-owner="e-webhook" data-graph-bounds="339.28,164,402,184">
+  <rect x="339.28" y="164.0" width="62.72" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="370.64" y="178.0" text-anchor="middle" class="arrow-label">webhook</text>
+  </g>
+  <g id="e-ingress-sqs-label" data-graph-role="label" data-owner="e-ingress-sqs" data-graph-bounds="307.6,266,402,286">
+  <rect x="307.6" y="266.0" width="94.4" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="354.8" y="280.0" text-anchor="middle" class="arrow-label">source.event</text>
+  </g>
+  <g id="e-feishu-label" data-graph-role="label" data-owner="e-feishu" data-graph-bounds="57.48,299,137,319">
+  <rect x="57.48" y="299.0" width="79.52" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="97.24" y="313.0" text-anchor="middle" class="arrow-label">WebSocket</text>
+  </g>
+  <g id="e-sqs-engine-label" data-graph-role="label" data-owner="e-sqs-engine" data-graph-bounds="327.28,411,402,431">
+  <rect x="327.28" y="411.0" width="74.72" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="364.64" y="425.0" text-anchor="middle" class="arrow-label">cell queue</text>
+  </g>
+  <g id="e-bedrock-label" data-graph-role="label" data-owner="e-bedrock" data-graph-bounds="602.32,386,672,406">
+  <rect x="602.32" y="386.0" width="69.67999999999999" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="637.16" y="400.0" text-anchor="middle" class="arrow-label">Converse</text>
+  </g>
+  <g id="e-litestream-label" data-graph-role="label" data-owner="e-litestream" data-graph-bounds="321.52,628,402,648">
+  <rect x="321.52" y="628.0" width="80.48" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="361.76" y="642.0" text-anchor="middle" class="arrow-label">Litestream</text>
+  </g>
+  <g id="e-signin-label" data-graph-role="label" data-owner="e-signin" data-graph-bounds="878.16,167,932,187">
+  <rect x="878.16" y="167.0" width="53.839999999999996" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="905.08" y="181.0" text-anchor="middle" class="arrow-label">sign in</text>
+  </g>
+  <g id="e-jwt-label" data-graph-role="label" data-owner="e-jwt" data-graph-bounds="844.32,266,932,286">
+  <rect x="844.32" y="266.0" width="87.68" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="888.16" y="280.0" text-anchor="middle" class="arrow-label">Cognito JWT</text>
+  </g>
+  <g id="e-panel-host-label" data-graph-role="label" data-owner="e-panel-host" data-graph-bounds="847.2,411,932,431">
+  <rect x="847.2" y="411.0" width="84.80000000000001" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="889.6" y="425.0" text-anchor="middle" class="arrow-label">lease owner</text>
+  </g>
+  <g id="e-kms-label" data-graph-role="label" data-owner="e-kms" data-graph-bounds="612.16,676,690,696">
+  <rect x="612.16" y="676.0" width="77.84" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="651.08" y="690.0" text-anchor="middle" class="arrow-label">sign token</text>
+  </g>
+  <g id="e-provision-label" data-graph-role="label" data-owner="e-provision" data-graph-bounds="820.5,591,894.5,611">
+  <rect x="820.5" y="591.0" width="74.0" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="857.5" y="605.0" text-anchor="middle" class="arrow-label">create AP</text>
+  </g>
+  <g id="e-invoke-label" data-graph-role="label" data-owner="e-invoke" data-graph-bounds="469.96,685.4,603,705.4">
+  <rect x="469.96" y="685.4" width="133.04" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="536.48" y="699.4" text-anchor="middle" class="arrow-label">InvokeAgentRuntime</text>
+  </g>
+  <g id="e-broker-label" data-graph-role="label" data-owner="e-broker" data-graph-bounds="775.85,872,824.65,892">
+  <rect x="775.85" y="872.0" width="48.8" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="800.25" y="886.0" text-anchor="middle" class="arrow-label">token</text>
+  </g>
+  <g id="e-mount-label" data-graph-role="label" data-owner="e-mount" data-graph-bounds="775.85,981,824.65,1001">
+  <rect x="775.85" y="981.0" width="48.8" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="800.25" y="995.0" text-anchor="middle" class="arrow-label">mount</text>
+  </g>
+  <g id="e-gw-workerapi-label" data-graph-role="label" data-owner="e-gw-workerapi" data-graph-bounds="351.92,987,458.08,1007">
+  <rect x="351.92" y="987.0" width="106.16000000000001" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="405.0" y="1001.0" text-anchor="middle" class="arrow-label">events · reads</text>
+  </g>
+  <g id="e-workerapi-sqs-label" data-graph-role="label" data-owner="e-workerapi-sqs" data-graph-bounds="166.6,621.5,261,641.5">
+  <rect x="166.6" y="621.5" width="94.4" height="20" rx="6" fill="#ffffff" opacity="0.94"/>
+  <text x="213.8" y="635.5" text-anchor="middle" class="arrow-label">worker.event</text>
+  </g>
+  <g id="legend" data-graph-role="legend">
+    <rect id="legend-zone" data-graph-role="reserved" data-reserved-kind="legend" x="30" y="1048" width="664" height="46" rx="10" fill="none" stroke="none"/>
+    <line data-graph-role="decoration" x1="40.0" y1="1062.0" x2="70.0" y2="1062.0" stroke="#f97316" stroke-width="2.4" marker-end="url(#arrowE)"/>
+    <text data-graph-role="decoration" x="80.0" y="1066.0" class="legend">messages and events</text>
+    <line data-graph-role="decoration" x1="234.96" y1="1062.0" x2="264.96000000000004" y2="1062.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)"/>
+    <text data-graph-role="decoration" x="274.96000000000004" y="1066.0" class="legend">API calls</text>
+    <line data-graph-role="decoration" x1="353.6" y1="1062.0" x2="383.6" y2="1062.0" stroke="#10b981" stroke-width="2.4" marker-end="url(#arrowB)"/>
+    <text data-graph-role="decoration" x="393.6" y="1066.0" class="legend">storage</text>
+    <line data-graph-role="decoration" x1="470.32000000000005" y1="1062.0" x2="500.32000000000005" y2="1062.0" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)"/>
+    <text data-graph-role="decoration" x="510.32000000000005" y="1066.0" class="legend">ticket token / credentials</text>
+  </g>
+  <g id="footer" data-graph-role="reserved" data-graph-bounds="40,1106,789,1122">
+  <text x="40.0" y="1118.0" class="footnote">dshsa-host is an ECS Fargate service; each task holds DynamoDB leases for the cells and Connectors it runs.</text>
+  </g>
+</svg>

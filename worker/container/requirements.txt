@@ -1,0 +1,4 @@
+aiohttp>=3.10
+boto3>=1.40
+cryptography>=44
+claude-agent-sdk==0.2.176

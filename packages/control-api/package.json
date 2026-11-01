@@ -1,0 +1,36 @@
+{
+  "name": "@dshsa/control-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/handler.ts"
+  },
+  "bin": {
+    "dshsa-admin": "./src/admin/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "admin": "tsx src/admin/cli.ts",
+    "e2e": "tsx e2e/run.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudformation": "^3.900.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.900.0",
+    "@aws-sdk/client-dynamodb": "^3.900.0",
+    "@aws-sdk/client-s3": "^3.900.0",
+    "@aws-sdk/client-secrets-manager": "^3.900.0",
+    "@aws-sdk/client-sqs": "^3.900.0",
+    "@aws-sdk/credential-provider-node": "^3.972.92",
+    "@aws-sdk/lib-dynamodb": "^3.900.0",
+    "@dshsa/contracts": "workspace:*",
+    "@dshsa/sources": "workspace:*",
+    "@smithy/signature-v4": "^5.7.5",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@smithy/types": "^4.19.0",
+    "tsx": "^4.20.0"
+  }
+}

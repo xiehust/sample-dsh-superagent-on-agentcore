@@ -1,0 +1,33 @@
+.
+./.claude
+./.claude/.claude.json
+./.claude/.last-cleanup
+./.claude/backups
+./.claude/backups/.claude.json.backup.1793500357979
+./.claude/cache
+./.claude/cache/model-access.json
+./.claude/plugins
+./.claude/plugins/store
+./.claude/projects
+./.claude/projects/-mnt-work-repo
+./.claude/session-env
+./.claude/session-env/e34eafb0-f993-5f5b-9a31-d670ba1b0b55
+./.claude/sessions
+./.claude/shell-snapshots
+./.claude/shell-snapshots/snapshot-bash-1793500371183-ezl4u6.sh
+./other
+./repo
+./repo/notes.txt
+220K	.claude
+total 8
+drwxr-xr-x. 9 agent agent 164 Nov  1 02:32 .
+drwxr-xr-x. 5 agent agent  46 Nov  1 02:33 ..
+-rw-------. 1 agent agent 719 Nov  1 02:32 .claude.json
+-rw-r--r--. 1 agent agent  24 Nov  1 02:32 .last-cleanup
+drwxr-xr-x. 2 agent agent  47 Nov  1 02:32 backups
+drwxr-xr-x. 2 agent agent  31 Nov  1 02:32 cache
+drwx------. 3 agent agent  19 Nov  1 02:32 plugins
+drwx------. 3 agent agent  28 Nov  1 02:32 projects
+drwxr-xr-x. 3 agent agent  50 Nov  1 02:32 session-env
+drwx------. 2 agent agent   6 Nov  1 02:33 sessions
+drwxr-xr-x. 2 agent agent  51 Nov  1 02:32 shell-snapshots

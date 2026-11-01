@@ -1,0 +1,22 @@
+{
+  "name": "@dshsa/infra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "synth": "cdk synth --quiet",
+    "cdk": "cdk"
+  },
+  "dependencies": {
+    "@dshsa/contracts": "workspace:*",
+    "aws-cdk-lib": "2.275.0",
+    "cdk-nag": "^2.38.2",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "aws-cdk": "2.1147.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.20.0"
+  }
+}

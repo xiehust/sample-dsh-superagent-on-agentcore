@@ -1,0 +1,36 @@
+{
+  "name": "@dshsa/sources",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GitHub and Feishu/Lark Sources for dshsa cells, the Feishu Connector and the GitHub webhook Lambda. Ported in part from dsh-superagent (MIT, DeepSeek Harness Team).",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./connector": "./src/connector/index.ts",
+    "./webhook": "./src/webhook/handler.ts",
+    "./apis": "./src/apis/index.ts",
+    "./e2e": "./e2e/ingress.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:ingress": "tsx e2e/check-ingress.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-secrets-manager": "^3.0.0",
+    "@aws-sdk/client-sqs": "^3.0.0",
+    "@dshsa/contracts": "workspace:*",
+    "@dshsa/core": "workspace:*",
+    "@larksuiteoapi/node-sdk": "1.76.0",
+    "zod": "4.4.3",
+    "@aws-sdk/client-cloudformation": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.8",
+    "tsx": "^4.20.0"
+  }
+}

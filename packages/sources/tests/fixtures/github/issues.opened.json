@@ -1,0 +1,36 @@
+{
+ "action": "opened",
+ "issue": {
+  "number": 12,
+  "title": "Fix the header",
+  "html_url": "https://github.com/acme/widgets/issues/12",
+  "user": {
+   "login": "alice",
+   "id": 1,
+   "type": "User"
+  },
+  "state": "open",
+  "created_at": "2026-11-01T10:00:00Z",
+  "updated_at": "2026-11-01T10:05:00Z",
+  "body": "@dshsa-agent please fix the header",
+  "id": 5012
+ },
+ "repository": {
+  "id": 812345,
+  "full_name": "acme/widgets",
+  "name": "widgets",
+  "owner": {
+   "login": "acme",
+   "type": "Organization"
+  },
+  "default_branch": "main"
+ },
+ "installation": {
+  "id": 4242
+ },
+ "sender": {
+  "login": "alice",
+  "id": 1,
+  "type": "User"
+ }
+}

@@ -1,0 +1,618 @@
+{
+ "ticket": "spike-s1-62603edd",
+ "rootPath": "/tenants/isotest/isotest--gh1/96944cbe4e756875906d653764953f53",
+ "start": {
+  "response": {
+   "ok": true,
+   "accepted": [],
+   "state": "running"
+  },
+  "seconds": 14.8
+ },
+ "mount": "127.0.0.1:/ on /mnt/work type nfs4 (rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,noresvport,proto=tcp,port=20902,timeo=600,retrans=2,sec=sys,clientaddr=127.0.0.1,local_lock=none,addr=127.0.0.1)\n127.0.0.1:/     8.0E  4.0M  8.0E   1% /mnt/work",
+ "median_ms": {
+  "clone": {
+   "/mnt/work/spike-s1": 137765,
+   "/tmp/spike-s1": 8287
+  },
+  "status_cold": {
+   "/mnt/work/spike-s1": 12670,
+   "/tmp/spike-s1": 235
+  },
+  "status_warm": {
+   "/mnt/work/spike-s1": 3179,
+   "/tmp/spike-s1": 166
+  },
+  "touch_100": {
+   "/mnt/work/spike-s1": 641,
+   "/tmp/spike-s1": 7
+  },
+  "status_dirty": {
+   "/mnt/work/spike-s1": 2235,
+   "/tmp/spike-s1": 164
+  },
+  "add_commit": {
+   "/mnt/work/spike-s1": 4516,
+   "/tmp/spike-s1": 71
+  },
+  "checkout_branch": {
+   "/mnt/work/spike-s1": 789,
+   "/tmp/spike-s1": 31
+  },
+  "grep": {
+   "/mnt/work/spike-s1": 11063,
+   "/tmp/spike-s1": 44
+  },
+  "log_200": {
+   "/mnt/work/spike-s1": 267,
+   "/tmp/spike-s1": 5
+  },
+  "npm_like_write": {
+   "/mnt/work/spike-s1": 22647,
+   "/tmp/spike-s1": 59
+  },
+  "rm_tree": {
+   "/mnt/work/spike-s1": 73791,
+   "/tmp/spike-s1": 201
+  }
+ },
+ "raw": [
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "clone",
+   "ms": 137765,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "status_cold",
+   "ms": 11985,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "status_warm",
+   "ms": 3142,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "touch_100",
+   "ms": 640,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "status_dirty",
+   "ms": 2235,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "add_commit",
+   "ms": 4469,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "checkout_branch",
+   "ms": 615,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "grep",
+   "ms": 11063,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "log_200",
+   "ms": 131,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "npm_like_write",
+   "ms": 22818,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "rm_tree",
+   "ms": 73935,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 1,
+   "step": "files",
+   "value": 7085
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "clone",
+   "ms": 9103,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "status_cold",
+   "ms": 173,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "status_warm",
+   "ms": 166,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "touch_100",
+   "ms": 7,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "status_dirty",
+   "ms": 164,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "add_commit",
+   "ms": 192,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "checkout_branch",
+   "ms": 148,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "grep",
+   "ms": 44,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "log_200",
+   "ms": 6,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "npm_like_write",
+   "ms": 59,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "rm_tree",
+   "ms": 202,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 1,
+   "step": "files",
+   "value": 7085
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "clone",
+   "ms": 138190,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "status_cold",
+   "ms": 12670,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "status_warm",
+   "ms": 3601,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "touch_100",
+   "ms": 641,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "status_dirty",
+   "ms": 2333,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "add_commit",
+   "ms": 4516,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "checkout_branch",
+   "ms": 850,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "grep",
+   "ms": 10204,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "log_200",
+   "ms": 267,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "npm_like_write",
+   "ms": 22647,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "rm_tree",
+   "ms": 73748,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 2,
+   "step": "files",
+   "value": 7085
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "clone",
+   "ms": 8209,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "status_cold",
+   "ms": 235,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "status_warm",
+   "ms": 223,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "touch_100",
+   "ms": 7,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "status_dirty",
+   "ms": 224,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "add_commit",
+   "ms": 71,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "checkout_branch",
+   "ms": 29,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "grep",
+   "ms": 45,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "log_200",
+   "ms": 5,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "npm_like_write",
+   "ms": 60,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "rm_tree",
+   "ms": 196,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 2,
+   "step": "files",
+   "value": 7085
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "clone",
+   "ms": 135770,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "status_cold",
+   "ms": 12826,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "status_warm",
+   "ms": 3179,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "touch_100",
+   "ms": 655,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "status_dirty",
+   "ms": 2224,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "add_commit",
+   "ms": 4532,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "checkout_branch",
+   "ms": 789,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "grep",
+   "ms": 11449,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "log_200",
+   "ms": 274,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "npm_like_write",
+   "ms": 22626,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "rm_tree",
+   "ms": 73791,
+   "rc": 0
+  },
+  {
+   "target": "/mnt/work/spike-s1",
+   "run": 3,
+   "step": "files",
+   "value": 7085
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "clone",
+   "ms": 8287,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "status_cold",
+   "ms": 264,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "status_warm",
+   "ms": 44,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "touch_100",
+   "ms": 7,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "status_dirty",
+   "ms": 45,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "add_commit",
+   "ms": 65,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "checkout_branch",
+   "ms": 31,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "grep",
+   "ms": 43,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "log_200",
+   "ms": 5,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "npm_like_write",
+   "ms": 59,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "rm_tree",
+   "ms": 201,
+   "rc": 0
+  },
+  {
+   "target": "/tmp/spike-s1",
+   "run": 3,
+   "step": "files",
+   "value": 7085
+  }
+ ],
+ "checkpoint": [
+  {
+   "run": 1,
+   "first_clone_ms": 9617,
+   "heavy_turn_ms": 512,
+   "heavy_bytes": 7911,
+   "turn3_ms": 174,
+   "turn3_snapshot_ms": 99,
+   "turn3_bundle_ms": 37,
+   "turn3_copy_ms": 38,
+   "turn3_bytes": 8339,
+   "noop_ms": 99,
+   "noop_skipped": "unchanged",
+   "resume_total_ms": 9935,
+   "resume_clone_ms": 9289,
+   "resume_restore_ms": 645,
+   "status_identical": true
+  },
+  {
+   "run": 2,
+   "first_clone_ms": 9206,
+   "heavy_turn_ms": 476,
+   "heavy_bytes": 7911,
+   "turn3_ms": 176,
+   "turn3_snapshot_ms": 97,
+   "turn3_bundle_ms": 37,
+   "turn3_copy_ms": 42,
+   "turn3_bytes": 8341,
+   "noop_ms": 97,
+   "noop_skipped": "unchanged",
+   "resume_total_ms": 10754,
+   "resume_clone_ms": 10087,
+   "resume_restore_ms": 667,
+   "status_identical": true
+  },
+  {
+   "run": 3,
+   "first_clone_ms": 9713,
+   "heavy_turn_ms": 453,
+   "heavy_bytes": 7989,
+   "turn3_ms": 173,
+   "turn3_snapshot_ms": 98,
+   "turn3_bundle_ms": 37,
+   "turn3_copy_ms": 38,
+   "turn3_bytes": 8415,
+   "noop_ms": 96,
+   "noop_skipped": "unchanged",
+   "resume_total_ms": 10054,
+   "resume_clone_ms": 9354,
+   "resume_restore_ms": 699,
+   "status_identical": true
+  }
+ ],
+ "prefix": {
+  "bucket": "dshsa-data-123456789012",
+  "key": "tenants/isotest/isotest--gh1/96944cbe4e756875906d653764953f53/out/prefix-check-d3b9d2.txt",
+  "found": true,
+  "export_s": 61.8
+ }
+}

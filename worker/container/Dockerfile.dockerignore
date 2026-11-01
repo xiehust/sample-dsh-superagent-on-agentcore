@@ -1,0 +1,6 @@
+# BuildKit reads this for worker/container/Dockerfile only (context = repository root).
+*
+!packages/contracts/python/dshsa_contracts.py
+!worker/src/dshsa_worker/**
+!worker/container/**
+**/__pycache__

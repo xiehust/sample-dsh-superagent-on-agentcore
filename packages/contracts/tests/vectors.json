@@ -1,0 +1,300 @@
+{
+  "cases": [
+    {
+      "tenantId": "acme",
+      "githubRepoId": 812345,
+      "ticketId": "tkt_0001",
+      "cellId": "acme--gh812345",
+      "ticketKey": "d5c02449549213be8a352aab4cc6b5cc",
+      "runtimeSessionId": "dshsa-d5c02449549213be8a352aab4cc6b5cc9db5000d4df3a63ee971d447f2c1f0f7",
+      "accessPointRoot": "/tenants/acme/acme--gh812345/d5c02449549213be8a352aab4cc6b5cc"
+    },
+    {
+      "tenantId": "beta-team",
+      "githubRepoId": 1,
+      "ticketId": "ticket:with/odd chars ✓",
+      "cellId": "beta-team--gh1",
+      "ticketKey": "dbb24f1999080132b3244ddc43e99f09",
+      "runtimeSessionId": "dshsa-dbb24f1999080132b3244ddc43e99f09349982cdedad163356a0bf60638ed1e7",
+      "accessPointRoot": "/tenants/beta-team/beta-team--gh1/dbb24f1999080132b3244ddc43e99f09"
+    }
+  ],
+  "workerEventEnvelope": {
+    "_doc": "Golden worker-api -> cell envelopes (contract v1 CellEnvelope worker.event, body = {event, verified}). TS: CellEnvelope.parse(envelope) must equal envelope. Python: worker_api.events(event) under these claims must emit envelope (the `at` field is the send time; compare it as an ISO-8601 timestamp). SQS: MessageGroupId = cellId, MessageDeduplicationId = id.",
+    "claims": {
+      "sub": "3856f03e3a47bcfc918a103b82fe7f8a",
+      "tid": "acme",
+      "cid": "acme--gh812345",
+      "tkt": "ticket-0001",
+      "asg": "assignment-0"
+    },
+    "cases": [
+      {
+        "event": {
+          "id": "ev-ack-1",
+          "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+          "assignmentId": "assignment-0",
+          "at": "2026-11-01T00:00:00Z",
+          "type": "ack",
+          "body": {
+            "text": "On it.",
+            "triggerId": "github:delivery-1"
+          }
+        },
+        "envelope": {
+          "v": 1,
+          "id": "we-96767c3791fc48b12704bfb6dfada545b23e1b15",
+          "cellId": "acme--gh812345",
+          "type": "worker.event",
+          "at": "2026-11-01T00:00:00+00:00",
+          "body": {
+            "event": {
+              "id": "ev-ack-1",
+              "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+              "assignmentId": "assignment-0",
+              "at": "2026-11-01T00:00:00Z",
+              "type": "ack",
+              "body": {
+                "text": "On it.",
+                "triggerId": "github:delivery-1"
+              }
+            },
+            "verified": {
+              "tid": "acme",
+              "cid": "acme--gh812345",
+              "tkt": "ticket-0001",
+              "asg": "assignment-0"
+            }
+          }
+        }
+      },
+      {
+        "event": {
+          "id": "ev-report-1",
+          "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+          "assignmentId": "assignment-0",
+          "at": "2026-11-01T00:00:00Z",
+          "type": "report",
+          "body": {
+            "state": "ready",
+            "text": "PR opened",
+            "question": null,
+            "askedBy": "feishu:msg-1",
+            "answers": "github:delivery-1",
+            "prNumber": 3,
+            "links": [
+              {
+                "url": "https://github.com/acme/app/pull/3",
+                "label": "PR #3"
+              }
+            ]
+          }
+        },
+        "envelope": {
+          "v": 1,
+          "id": "we-8dc1e1c51316db9a3b5d09d2f4d6758587de8e4c",
+          "cellId": "acme--gh812345",
+          "type": "worker.event",
+          "at": "2026-11-01T00:00:00+00:00",
+          "body": {
+            "event": {
+              "id": "ev-report-1",
+              "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+              "assignmentId": "assignment-0",
+              "at": "2026-11-01T00:00:00Z",
+              "type": "report",
+              "body": {
+                "state": "ready",
+                "text": "PR opened",
+                "question": null,
+                "askedBy": "feishu:msg-1",
+                "answers": "github:delivery-1",
+                "prNumber": 3,
+                "links": [
+                  {
+                    "url": "https://github.com/acme/app/pull/3",
+                    "label": "PR #3"
+                  }
+                ]
+              }
+            },
+            "verified": {
+              "tid": "acme",
+              "cid": "acme--gh812345",
+              "tkt": "ticket-0001",
+              "asg": "assignment-0"
+            }
+          }
+        }
+      },
+      {
+        "event": {
+          "id": "ev-handback-1",
+          "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+          "assignmentId": "assignment-0",
+          "at": "2026-11-01T00:00:00Z",
+          "type": "handback",
+          "body": {
+            "triggerIds": [
+              "github:delivery-2"
+            ],
+            "reason": "not this ticket"
+          }
+        },
+        "envelope": {
+          "v": 1,
+          "id": "we-f8edb6275b11cffe6101f718024889fb49938b02",
+          "cellId": "acme--gh812345",
+          "type": "worker.event",
+          "at": "2026-11-01T00:00:00+00:00",
+          "body": {
+            "event": {
+              "id": "ev-handback-1",
+              "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+              "assignmentId": "assignment-0",
+              "at": "2026-11-01T00:00:00Z",
+              "type": "handback",
+              "body": {
+                "triggerIds": [
+                  "github:delivery-2"
+                ],
+                "reason": "not this ticket"
+              }
+            },
+            "verified": {
+              "tid": "acme",
+              "cid": "acme--gh812345",
+              "tkt": "ticket-0001",
+              "asg": "assignment-0"
+            }
+          }
+        }
+      },
+      {
+        "event": {
+          "id": "ev-follow-1",
+          "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+          "assignmentId": "assignment-0",
+          "at": "2026-11-01T00:00:00Z",
+          "type": "thread.follow",
+          "body": {
+            "thread": "github:42",
+            "reason": "PR thread"
+          }
+        },
+        "envelope": {
+          "v": 1,
+          "id": "we-ef31ee6e647116960fe780f52dea0ea60c992d60",
+          "cellId": "acme--gh812345",
+          "type": "worker.event",
+          "at": "2026-11-01T00:00:00+00:00",
+          "body": {
+            "event": {
+              "id": "ev-follow-1",
+              "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+              "assignmentId": "assignment-0",
+              "at": "2026-11-01T00:00:00Z",
+              "type": "thread.follow",
+              "body": {
+                "thread": "github:42",
+                "reason": "PR thread"
+              }
+            },
+            "verified": {
+              "tid": "acme",
+              "cid": "acme--gh812345",
+              "tkt": "ticket-0001",
+              "asg": "assignment-0"
+            }
+          }
+        }
+      },
+      {
+        "event": {
+          "id": "ev-turn-1",
+          "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+          "assignmentId": "assignment-0",
+          "at": "2026-11-01T00:00:00Z",
+          "type": "turn.ended",
+          "body": {
+            "reason": "done"
+          }
+        },
+        "envelope": {
+          "v": 1,
+          "id": "we-af0d799a7f45af3ae21ebe1dbe8463a2aa7a67c9",
+          "cellId": "acme--gh812345",
+          "type": "worker.event",
+          "at": "2026-11-01T00:00:00+00:00",
+          "body": {
+            "event": {
+              "id": "ev-turn-1",
+              "ticketKey": "3856f03e3a47bcfc918a103b82fe7f8a",
+              "assignmentId": "assignment-0",
+              "at": "2026-11-01T00:00:00Z",
+              "type": "turn.ended",
+              "body": {
+                "reason": "done"
+              }
+            },
+            "verified": {
+              "tid": "acme",
+              "cid": "acme--gh812345",
+              "tkt": "ticket-0001",
+              "asg": "assignment-0"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "invocationResponses": {
+    "_doc": "InvocationResponse goldens (design §4.4). workerVersion is optional on both branches; absent = an image older than the field (stale). TS: InvocationResponse.parse(response) must equal response. Python: ok_response/error_response build the same dicts.",
+    "workerVersion": "0123456789abcdef",
+    "cases": [
+      {
+        "call": [
+          "ok",
+          [
+            "in-1"
+          ],
+          "running"
+        ],
+        "response": {
+          "ok": true,
+          "accepted": [
+            "in-1"
+          ],
+          "state": "running",
+          "workerVersion": "0123456789abcdef"
+        }
+      },
+      {
+        "call": [
+          "error",
+          "bound_to_other_ticket",
+          "this microVM serves another ticket"
+        ],
+        "response": {
+          "ok": false,
+          "error": "bound_to_other_ticket",
+          "message": "this microVM serves another ticket",
+          "workerVersion": "0123456789abcdef"
+        }
+      },
+      {
+        "call": [
+          "ok",
+          [],
+          "idle"
+        ],
+        "legacy": true,
+        "response": {
+          "ok": true,
+          "accepted": [],
+          "state": "idle"
+        }
+      }
+    ]
+  }
+}

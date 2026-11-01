@@ -1,0 +1,40 @@
+{
+ "action": "completed",
+ "check_suite": {
+  "id": 1,
+  "head_branch": "agent/fix-header",
+  "head_sha": "abc123def4567890abc123def4567890abc12345",
+  "status": "completed",
+  "conclusion": "failure",
+  "pull_requests": [
+   {
+    "number": 15,
+    "head": {
+     "ref": "agent/fix-header",
+     "sha": "abc123def4567890abc123def4567890abc12345"
+    },
+    "base": {
+     "ref": "main"
+    }
+   }
+  ]
+ },
+ "repository": {
+  "id": 812345,
+  "full_name": "acme/widgets",
+  "name": "widgets",
+  "owner": {
+   "login": "acme",
+   "type": "Organization"
+  },
+  "default_branch": "main"
+ },
+ "installation": {
+  "id": 4242
+ },
+ "sender": {
+  "login": "dshsa-agent[bot]",
+  "id": 99,
+  "type": "Bot"
+ }
+}

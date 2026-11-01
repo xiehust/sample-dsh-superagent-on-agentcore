@@ -1,0 +1,41 @@
+{
+  "name": "@dshsa/cell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "dshsa control-plane host: cells (DSH Engine + SQLite), leases, AgentCore executor, Bedrock assessor.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api-types": "./src/api-types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev": "tsx src/dev.ts",
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agentcore": "^3.1161.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1161.0",
+    "@aws-sdk/client-dynamodb": "^3.1161.0",
+    "@aws-sdk/client-kms": "^3.1161.0",
+    "@aws-sdk/client-lambda": "^3.1161.0",
+    "@aws-sdk/client-s3": "^3.1161.0",
+    "@aws-sdk/client-secrets-manager": "^3.1161.0",
+    "@aws-sdk/client-sqs": "^3.1161.0",
+    "@aws-sdk/client-ssm": "^3.1161.0",
+    "@dshsa/assess": "workspace:*",
+    "@dshsa/contracts": "workspace:*",
+    "@dshsa/core": "workspace:*",
+    "@dshsa/sources": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

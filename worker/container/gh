@@ -1,0 +1,5 @@
+#!/bin/bash
+# gh wrapper: the cell repo's installation token from the gateway proxy (see git-credential-dshsa), never a stored login.
+GH_TOKEN="$(/app/git-credential-dshsa token)" || { echo "gh: no GitHub credentials from the control plane" >&2; exit 1; }
+export GH_TOKEN
+exec /usr/bin/gh-real "$@"

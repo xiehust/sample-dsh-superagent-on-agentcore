@@ -1,0 +1,22 @@
+{
+  "schema": "2.0",
+  "event_id": "5e3702a84e847582be8db7fb73283c02",
+  "event_type": "im.message.receive_v1",
+  "tenant_key": "2ca1d211f64f6438",
+  "app_id": "cli_app",
+  "sender": { "sender_id": { "union_id": "on_8ed6aa67826108097d9ee143816345", "user_id": "e33ggbyz", "open_id": "ou_alice" }, "sender_type": "user", "tenant_key": "2ca1d211f64f6438" },
+  "message": {
+    "message_id": "om_5ce6d572455d361153b7cb51da133945",
+    "root_id": "om_root1",
+    "parent_id": "om_root1",
+    "create_time": "1762000000000",
+    "update_time": "1762000000000",
+    "chat_id": "oc_team",
+    "thread_id": "omt_topic1",
+    "chat_type": "group",
+    "message_type": "text",
+    "content": "{\"text\":\"@_user_1 please fix the header\"}",
+    "mentions": [ { "key": "@_user_1", "id": { "union_id": "on_bot", "user_id": "", "open_id": "ou_bot" }, "name": "Agent", "tenant_key": "2ca1d211f64f6438" } ],
+    "user_agent": "Mozilla/5.0"
+  }
+}

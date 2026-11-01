@@ -1,0 +1,29 @@
+{
+  "name": "@dshsa/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DSH domain core (Engine, model, policy) ported verbatim from dsh-superagent (MIT, DeepSeek Harness Team).",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/core/index.ts",
+    "./policy": "./src/policy.ts",
+    "./admission": "./src/admission.ts",
+    "./limits": "./src/limits.ts",
+    "./text": "./src/infra/text.ts",
+    "./host": "./src/host/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.4.3",
+    "@dshsa/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

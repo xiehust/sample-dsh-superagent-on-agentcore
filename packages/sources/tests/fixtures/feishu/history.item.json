@@ -1,0 +1,15 @@
+{
+  "message_id": "om_5ce6d572455d361153b7cb51da133945",
+  "root_id": "om_root1",
+  "parent_id": "om_root1",
+  "thread_id": "omt_topic1",
+  "msg_type": "text",
+  "create_time": "1762000000000",
+  "update_time": "1762000000000",
+  "deleted": false,
+  "updated": false,
+  "chat_id": "oc_team",
+  "sender": { "id": "ou_alice", "id_type": "open_id", "sender_type": "user", "tenant_key": "2ca1d211f64f6438" },
+  "body": { "content": "{\"text\":\"@_user_1 please fix the header\"}" },
+  "mentions": [ { "key": "@_user_1", "id": "ou_bot", "id_type": "open_id", "name": "Agent", "tenant_key": "2ca1d211f64f6438" } ]
+}

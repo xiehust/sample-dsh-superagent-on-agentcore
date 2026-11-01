@@ -1,0 +1,54 @@
+{
+ "action": "opened",
+ "number": 15,
+ "pull_request": {
+  "number": 15,
+  "id": 9015,
+  "title": "Fix header",
+  "html_url": "https://github.com/acme/widgets/pull/15",
+  "user": {
+   "login": "dshsa-agent[bot]",
+   "id": 99,
+   "type": "Bot"
+  },
+  "state": "open",
+  "body": "Fixes #12",
+  "created_at": "2026-11-01T11:00:00Z",
+  "updated_at": "2026-11-01T11:00:00Z",
+  "merged": false,
+  "merged_at": null,
+  "closed_at": null,
+  "auto_merge": null,
+  "head": {
+   "sha": "abc123def4567890abc123def4567890abc12345",
+   "ref": "agent/fix-header",
+   "repo": {
+    "full_name": "acme/widgets"
+   }
+  },
+  "base": {
+   "ref": "main",
+   "repo": {
+    "full_name": "acme/widgets"
+   }
+  }
+ },
+ "repository": {
+  "id": 812345,
+  "full_name": "acme/widgets",
+  "name": "widgets",
+  "owner": {
+   "login": "acme",
+   "type": "Organization"
+  },
+  "default_branch": "main"
+ },
+ "installation": {
+  "id": 4242
+ },
+ "sender": {
+  "login": "dshsa-agent[bot]",
+  "id": 99,
+  "type": "Bot"
+ }
+}

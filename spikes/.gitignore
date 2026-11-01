@@ -1,0 +1,4 @@
+node_modules
+cdk.out/
+S2-sdk-resume/vol/
+__pycache__/

@@ -1,0 +1,7 @@
+{
+  "region": "ap-northeast-1",
+  "userPoolId": "ap-northeast-1_EXAMPLE",
+  "clientId": "exampleclientid0000000000",
+  "domain": "https://dshsa-000000000000.auth.ap-northeast-1.amazoncognito.com",
+  "apiUrl": "https://example.execute-api.ap-northeast-1.amazonaws.com"
+}

@@ -1,0 +1,22 @@
+node_modules/
+dist/
+/packages/*/lib/
+cdk.out/
+.venv/
+__pycache__/
+*.log
+.env
+dsh-superagent-prototype/
+.orca/
+.pytest_cache/
+.agents/
+.claude/
+.codegraph/
+.codex/
+.kiro/# Installation-specific: the target account and CDK's cached AZ lookups (they name the account).
+scripts/local.env
+infra/cdk.context.json
+# Internal agent workflow, task notes and personal journals.
+/.trellis/
+/.kiro/
+/AGENTS.md

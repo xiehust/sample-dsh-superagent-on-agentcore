@@ -1,0 +1,23 @@
+{
+  "name": "@dshsa/assess",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Stateless Bedrock model layer for the dshsa cell's Assessor and Replier: Converse tool calls with auto tool choice, a must-call instruction and one corrective retry, prompt caching, throttling retries and an Eval deadline.",
+  "license": "MIT",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1161.0",
+    "@dshsa/contracts": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.8"
+  }
+}

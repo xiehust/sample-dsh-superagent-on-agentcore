@@ -1,0 +1,54 @@
+{
+ "feishu/api": {
+  "n": 136,
+  "fail": 0,
+  "status": {
+   "HTTP/1.1 200 OK": 136
+  },
+  "tls_p50": 176.5,
+  "tls_p95": 181.6,
+  "tls_max": 186.0,
+  "rt_p50": 443.9,
+  "rt_p95": 470.6,
+  "rt_max": 476.8
+ },
+ "feishu/ws": {
+  "n": 136,
+  "fail": 0,
+  "status": {
+   "HTTP/1.1 400 Bad Request": 136
+  },
+  "tls_p50": 31.3,
+  "tls_p95": 35.2,
+  "tls_max": 60.8,
+  "rt_p50": 379.7,
+  "rt_p95": 404.7,
+  "rt_max": 457.2
+ },
+ "lark/api": {
+  "n": 136,
+  "fail": 0,
+  "status": {
+   "HTTP/1.1 200 OK": 136
+  },
+  "tls_p50": 18.0,
+  "tls_p95": 24.8,
+  "tls_max": 39.1,
+  "rt_p50": 200.2,
+  "rt_p95": 519.7,
+  "rt_max": 699.0
+ },
+ "lark/ws": {
+  "n": 136,
+  "fail": 0,
+  "status": {
+   "HTTP/1.1 400 Bad Request": 136
+  },
+  "tls_p50": 17.8,
+  "tls_p95": 27.7,
+  "tls_max": 65.8,
+  "rt_p50": 128.0,
+  "rt_p95": 332.6,
+  "rt_max": 510.7
+ }
+}
