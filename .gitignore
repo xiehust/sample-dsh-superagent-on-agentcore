@@ -19,4 +19,3 @@ infra/cdk.context.json
 # Internal agent workflow, task notes and personal journals.
 /.trellis/
 /.kiro/
-/AGENTS.md
