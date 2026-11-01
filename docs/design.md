@@ -100,6 +100,7 @@ Response: always HTTP 200 (AgentCore turns any other status into 424 and drops t
 `{ "ok": true, "accepted": ["<inputId>"], "state": "idle|running|stopped" }` or `{ "ok": false, "error": "<code>", "message": "" }`.
 Semantics:
 - `start` is idempotent per assignmentId. It mounts the AP, prepares the repo on the first run, resumes the agent transcript if one exists, and runs the agent **asynchronously**; `/ping` reports `HealthyBusy` while it runs.
+- Cold start (platform V2): the platform drops the page cache before it snapshots a ready microVM, so the first mount would cold-read the mount helper, `efs-proxy` and their libraries from the lazily loaded snapshot disk. The gateway starts `pinner.py` before it listens on :8080; it maps the files listed by the image's build-time probe (`pin_manifest.py`, at most 128 MB, 5 s) so they stay in the snapshot, and is killed once the first mount ends. Best effort: a missing manifest or a pinner failure only logs a warning.
 - `deliver` queues inputs by `id` and deduplicates them; the agent picks them up at its next step boundary.
 - `stop` cancels the current turn and keeps the inbox.
 - `status` returns the state without side effects.

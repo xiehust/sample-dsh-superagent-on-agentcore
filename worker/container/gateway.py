@@ -19,6 +19,7 @@ import boto3
 from aiohttp import web
 from gateway_core import Gateway, log
 from inbox import Store
+from pinner import MANIFEST, Pinner
 
 from dshsa_worker.ticket_token import KmsPublicKeys, TicketTokenVerifier
 
@@ -57,7 +58,8 @@ def sigv4(method: str, url: str, data: bytes, headers: dict) -> dict:
 class S3FilesMounter:
     """Broker → root-only profile → `mount -t s3files` the ticket's AP at /mnt/work; rotate before the creds expire."""
 
-    def __init__(self) -> None:
+    def __init__(self, pinner: Pinner | None = None) -> None:
+        self.pinner = pinner  # holds the first mount's files in memory across the V2 snapshot; released after that mount
         self.lambda_client = boto3.client("lambda", region_name=REGION)
         self.function = os.environ.get("BROKER_FUNCTION", "dshsa-broker")
         self.latest_token: str | None = None
@@ -118,14 +120,24 @@ class S3FilesMounter:
             self.target = {"ticketKey": None}
             return self.target
         t0 = time.monotonic()
-        target = await self._mint(token)
-        t1 = time.monotonic()
-        await asyncio.get_running_loop().run_in_executor(None, self._mount, target["fileSystemId"], target["accessPointId"])
+        try:
+            target = await self._mint(token)
+            t1 = time.monotonic()
+            await asyncio.get_running_loop().run_in_executor(None, self._mount, target["fileSystemId"], target["accessPointId"])
+        finally:
+            self.release_pin()
         self.target = target
         log("mounted", ticketKey=target["ticketKey"], accessPointId=target["accessPointId"], mint_ms=int((t1 - t0) * 1000),
             mount_ms=int((time.monotonic() - t1) * 1000))
         asyncio.get_running_loop().create_task(self._refresh_loop())
         return target
+
+    def release_pin(self) -> None:
+        """After the first mount, success or not: the pages it needed are read, the pins would only hold memory."""
+        pinner, self.pinner = self.pinner, None
+        if pinner:
+            pinner.release()
+            log("pin_released")
 
     def _seconds_until_refresh(self) -> float:
         remaining = (self.expiration - datetime.now(UTC)).total_seconds() if self.expiration else 0
@@ -184,14 +196,14 @@ def verifier() -> TicketTokenVerifier:
     return TicketTokenVerifier(KmsPublicKeys(boto3.client("kms", region_name=REGION), os.environ["TICKET_KEY_ID"]))
 
 
-def build_app() -> web.Application:
+def build_app(pinner: Pinner | None = None) -> web.Application:
     state: dict = {}
 
     async def on_startup(app: web.Application) -> None:
         session = aiohttp.ClientSession()
         agent = HttpAgent(session)
         owner = int(os.environ.get("AGENT_UID", "1000")) if MOUNT_MODE == "local" and os.getuid() == 0 else None
-        gw = Gateway(verifier=verifier(), mounter=S3FilesMounter(), agent=agent, store=Store(WORK, owner=owner))
+        gw = Gateway(verifier=verifier(), mounter=S3FilesMounter(pinner), agent=agent, store=Store(WORK, owner=owner))
         state.update(session=session, agent=agent, gw=gw)
         log("gateway_started", workerVersion=gw.version)
 
@@ -305,7 +317,9 @@ async def watch_loop_lag(every_s: float = 1.0, warn_s: float = 2.0) -> None:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     assert os.getuid() == 0 or MOUNT_MODE == "local", "gateway must run as root (mount + credential file)"
-    web.run_app(build_app(), host="0.0.0.0", port=8080, access_log=None)  # noqa: S104 - AgentCore contract port
+    # V2 snapshots once /ping answers, after dropping the page cache: pin the first mount's files before the port opens.
+    pinner = Pinner.start(os.environ.get("PIN_MANIFEST", MANIFEST), log) if MOUNT_MODE != "local" else None
+    web.run_app(build_app(pinner), host="0.0.0.0", port=8080, access_log=None)  # noqa: S104 - AgentCore contract port
 
 
 if __name__ == "__main__":

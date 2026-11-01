@@ -71,6 +71,8 @@ call AWS unless the user asked for it.
   differs from SSM `/dshsa-worker/version`. To force one by hand, `StopRuntimeSession` for that ticket.
 - The GitHub App **slug** is the last part of `github.com/apps/<slug>`, not the Client ID (`Iv…`); `app-set` reads
   it from `GET /app`. Hosts read it at cell start.
+- AgentCore V2 drops the page cache before its snapshot: files the first request reads are pinned by `worker/container/pinner.py` from
+  the manifest the Dockerfile's last step probes. Never replace a listed file after the build (e.g. `sed -i` at run time).
 - Never trust a GitHub `installation_id` from a redirect; verify with the user token (`GET /user/installations`).
 - Policy rejections are logged as `trigger not admitted` with a reason in `/dshsa/host`; check it first when a
   message "does nothing".
