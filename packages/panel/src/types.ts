@@ -137,10 +137,12 @@ export type TranscriptBlock =
   | { type: 'tool_result'; tool_use_id?: string; content?: unknown; is_error?: boolean }
   | { type: string; [key: string]: unknown }
 /** panel-api `GET /v1/cells/{cellId}/tickets/{ticketId}/transcript` (control-api `Transcript`). */
-export interface TranscriptView { entries: TranscriptEntry[]; truncated?: boolean; updatedAt?: string }
+/** `agent` (contracts v7 §7): which worker wrote the transcript; absent (older control-api) means Claude. */
+export interface TranscriptView { entries: TranscriptEntry[]; truncated?: boolean; updatedAt?: string; agent?: 'claude' | 'codex' }
 
 // ---- DSH management views (forwarded through /v1/cells/{cellId}/api/*), from the cell host ----
 
+export type { CatalogModel, Effort, ModelSurface, SurfaceSpec, WorkerType } from '@dshsa/cell/api-types'
 export type { Api, ApiRequest, ApiResponse, DecisionListView, HistoryView, ModelCatalog, OverviewView, PromptConfig, PromptsView,
   PromptVersion, RouteParams, SearchView, Settings, SettingsBlock, SettingsView, SourceStatusView, StateView, ThreadDetailView,
   ThreadFilter, ThreadListView, TicketFilter, TicketListView, TicketPageView } from '@dshsa/cell/api-types'
@@ -174,3 +176,6 @@ export type AdmissionRowView = NonNullable<SourcePolicyView['rows']>[number]
 export type AdmissionCell = keyof AdmissionRowView['cells']
 /** A cell's 400 for an invalid settings block: zod issues with dotted paths (e.g. `sources.github.allowed.0.id`). */
 export interface Issue { path: string; message: string }
+
+/** A role's stored model choice (core `RoleModelSchema`); `null` in settings means the catalog default. */
+export interface RoleModel { provider: string; model: string; reasoningEffort?: string }

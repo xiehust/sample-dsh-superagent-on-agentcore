@@ -6,7 +6,13 @@ import { App } from './app.tsx'
 import { Auth } from './auth.ts'
 import { loadConfig } from './config.ts'
 import { isLoginCallback, rememberReturn, routeOf, takeReturn } from './routes.ts'
+import { applyTheme, storedTheme } from './theme.ts'
+// Self-hosted fonts (CSP `font-src 'self'`): Vite emits the woff2 files as same-origin assets.
+import '@fontsource-variable/atkinson-hyperlegible-next'
+import '@fontsource/atkinson-hyperlegible-mono/latin-400.css'
 import './styles.css'
+
+applyTheme(storedTheme(), false)
 
 const root = createRoot(document.getElementById('root')!)
 

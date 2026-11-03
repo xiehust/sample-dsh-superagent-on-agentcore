@@ -5,6 +5,7 @@
  */
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { ApiError, errorText, type Client } from './api.ts'
+import { applyTheme, storedTheme, THEME_LABELS, THEMES, type Theme } from './theme.ts'
 import type { CellView, MeView, PanelRole } from './types.ts'
 
 export const TABS = ['overview', 'execution', 'settings', 'setup', 'platform'] as const
@@ -157,3 +158,42 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
 /** A short read-only note for members, who may read everything but change only tickets (Stop/Retry). */
 export const ReadOnlyNote = ({ what = 'these settings' }: { what?: string }) =>
   <p className="notice notice-readonly" role="note">Read-only: only a team admin can change {what}.</p>
+
+/** System, Light or Dark; applied to <html> at once and remembered on this device. */
+export function ThemeSwitch() {
+  const [theme, setTheme] = useState<Theme>(storedTheme)
+  const name = useId()
+  const choose = (next: Theme) => { setTheme(next); applyTheme(next) }
+  return <div className="theme-switch">
+    <span className="theme-label" id={`${name}-label`}>Theme</span>
+    <div className="theme-options" role="radiogroup" aria-labelledby={`${name}-label`}>
+      {THEMES.map(item => <label key={item}>
+        <input type="radio" name={name} value={item} checked={theme === item} onChange={() => choose(item)} />{THEME_LABELS[item]}
+      </label>)}
+    </div>
+  </div>
+}
+
+/** The account menu in the top bar: who is signed in, the theme, and Log out. Closes on Escape or a click outside. */
+export function AccountMenu({ email, onLogout }: { email: string | undefined; onLogout: () => void }) {
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  const id = useId()
+  useEffect(() => {
+    if (!open) return
+    const away = (event: MouseEvent) => { if (!box.current?.contains(event.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', away)
+    return () => document.removeEventListener('mousedown', away)
+  }, [open])
+  return <div ref={box} className="account" onKeyDown={event => { if (event.key === 'Escape' && open) { setOpen(false); button.current?.focus() } }}>
+    <button ref={button} type="button" className="account-button" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(!open)}>
+      {email ? <><span className="visually-hidden">Account: </span><span className="email">{email}</span></> : 'Account'}
+    </button>
+    {open && <div id={id} className="account-menu" role="group" aria-label="Account">
+      {email && <span className="account-email">Signed in as {email}</span>}
+      <ThemeSwitch />
+      <button type="button" onClick={onLogout}>Log out</button>
+    </div>}
+  </div>
+}

@@ -71,7 +71,7 @@ export function TicketDetail({ id, onBack }: { id: string; onBack: () => void })
       </div>
     </header>
     <div className="row-meta">
-      <span className="tag" data-stage={data.stage}>{stageText(data)}</span>
+      <span className="tag" data-stage={data.stage} data-action={'action' in data ? data.action : undefined}>{stageText(data)}</span>
       <span>Mandate: {data.mandate.strength}</span>
       <span>Requested by: {actorText(data.mandate.actor)}</span>
       <span>Updated: {when(data.updatedAt)}</span>
