@@ -1,13 +1,14 @@
-import { App, Aspects } from 'aws-cdk-lib'
+import { Aspects } from 'aws-cdk-lib'
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions'
 import { AwsSolutionsChecks } from 'cdk-nag'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ACCOUNT, compose } from '../lib/compose.ts'
+import { testApp } from './test-app.ts'
 
 let ingress: Template
 let annotations: Annotations
 beforeAll(async () => {
-  const app = new App({ context: { '@aws-cdk/core:defaultCrossStackReferences': 'strong' } })
+  const app = testApp()
   const stacks = await compose(app, { account: ACCOUNT })
   Aspects.of(app).add(new AwsSolutionsChecks())
   app.synth()

@@ -444,3 +444,14 @@ async def test_sdk_runner_logs_cli_started_once_per_turn_and_first_only_once(tmp
     lines = [json.loads(line) for line in capsys.readouterr().out.splitlines() if '"cli_started"' in line]
     assert [(line["component"], line["first"]) for line in lines] == [("agent", True), ("agent", False)] and worker.cli_started
     assert all(line["ms"] >= 140 and 40 <= line["connect_ms"] < line["ms"] for line in lines)  # from before connect to the first message
+
+
+def test_codex_first_turn_lists_rg_then_the_codex_binary_and_no_sdk(monkeypatch):
+    monkeypatch.setattr(pin_manifest, "sdk_files", lambda *a: pytest.fail("the codex image has no Agent SDK to probe"))
+    monkeypatch.setattr(pin_manifest, "AGENT_FILES", ["/etc/hosts"])
+    monkeypatch.setattr(pin_manifest, "is_elf", lambda p: False)
+    monkeypatch.setattr(pin_manifest, "which", lambda name: f"/usr/local/bin/{name}")
+    monkeypatch.setattr(pin_manifest, "ldd", lambda p: [])
+    assert pin_manifest.first_turn(agent_type="codex") == ["/etc/hosts", "/usr/local/bin/rg", "/usr/local/bin/codex"]
+    monkeypatch.setenv("DSHSA_AGENT", "codex")
+    assert pin_manifest.first_turn()[-1] == "/usr/local/bin/codex"

@@ -65,15 +65,21 @@ export class HostModule extends Construct {
     // Ticket tokens (parent design §4.3): only the host signs.
     allow(['kms:Sign', 'kms:GetPublicKey', 'kms:DescribeKey'], [shared.ticketTokenKey.keyArn], 'TicketTokenSign')
     // Workers: one AgentCore runtime session per ticket, and their access points.
-    allow(['bedrock-agentcore:InvokeAgentRuntime'], [worker.runtimeArn, `${worker.runtimeArn}/*`], 'InvokeWorkerRuntime')
-    // Stale sessions (contracts WorkerVersion): read the version the runtime serves, and stop an idle session still on an old image.
-    allow(['bedrock-agentcore:StopRuntimeSession'], [worker.runtimeArn, `${worker.runtimeArn}/*`], 'StopStaleWorkerSessions')
-    allow(['ssm:GetParameter'], [`arn:aws:ssm:${region}:${account}:parameter${WorkerVersion.parameter}`], 'WorkerVersionRead')
+    // v7: one runtime per worker type (the Codex one is optional); a ticket's sticky type picks the runtime it is invoked on.
+    const runtimes = [worker.runtimeArn, ...worker.codexRuntimeArn ? [worker.codexRuntimeArn] : []].flatMap(arn => [arn, `${arn}/*`])
+    allow(['bedrock-agentcore:InvokeAgentRuntime'], runtimes, 'InvokeWorkerRuntime')
+    // Stale sessions (contracts WorkerVersion): read the version each runtime serves, and stop an idle session still on an old image.
+    allow(['bedrock-agentcore:StopRuntimeSession'], runtimes, 'StopStaleWorkerSessions')
+    const parameters = [WorkerVersion.parameters.claude, ...worker.codexRuntimeArn ? [WorkerVersion.parameters.codex] : []]
+    allow(['ssm:GetParameter'], parameters.map(name => `arn:aws:ssm:${region}:${account}:parameter${name}`), 'WorkerVersionRead')
     allow(['lambda:InvokeFunction'], [worker.provisionerFunction.functionArn], 'InvokeProvisioner')
-    // Stateless assessment and replies (Converse on global cross-region inference profiles of Anthropic models).
+    // Stateless assessment and replies (Converse on global cross-region inference profiles of Anthropic and, v7, OpenAI models;
+    // GPT-6 models also need the account's default Bedrock project). Independent of the Codex runtime flag.
     allow(['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'], [
       `arn:aws:bedrock:*:${account}:inference-profile/global.anthropic.*`, `arn:aws:bedrock:*:${account}:inference-profile/*.anthropic.*`,
-      'arn:aws:bedrock:*::foundation-model/anthropic.*', 'arn:aws:bedrock:::foundation-model/anthropic.*'], 'BedrockModels')
+      'arn:aws:bedrock:*::foundation-model/anthropic.*', 'arn:aws:bedrock:::foundation-model/anthropic.*',
+      `arn:aws:bedrock:*:${account}:inference-profile/global.openai.*`, 'arn:aws:bedrock:*::foundation-model/openai.*',
+      'arn:aws:bedrock:::foundation-model/openai.*', `arn:aws:bedrock:${region}:${account}:project/default`], 'BedrockModels')
     // Litestream replicas and connector KV in the state bucket (host only).
     const state = shared.buckets.state
     allow(['s3:GetObject', 's3:PutObject', 's3:DeleteObject'], [state.arnForObjects('cells/*'), state.arnForObjects('connectors/*')], 'StateObjects')
@@ -93,6 +99,7 @@ export class HostModule extends Construct {
       stopTimeout: Duration.seconds(60),
       environment: {
         AWS_REGION: region, DATA_DIR: '/data', STATE_BUCKET: state.bucketName, RUNTIME_ARN: worker.runtimeArn,
+        ...worker.codexRuntimeArn ? { RUNTIME_ARN_CODEX: worker.codexRuntimeArn } : {},
         PROVISIONER_FUNCTION: worker.provisionerFunction.functionName, TOKEN_KEY_ID: shared.ticketTokenKey.keyArn,
         GITHUB_APP_SECRET: shared.secrets.githubApp.secretArn, ACCOUNT_ID: account,
         PANEL_API_ROLE_NAME: props.panelApiRoleName ?? 'dshsa-panel-api', WORKER_API_ROLE_NAME: props.workerApiRoleName ?? 'dshsa-worker-api',
@@ -111,8 +118,8 @@ export class HostModule extends Construct {
 
     NagSuppressions.addResourceSuppressions(taskRole, [
       why('AwsSolutions-IAM5', 'Wildcards are scoped: dshsa-cell-*.fifo queues (created at runtime per cell), dshsa/feishu/* secrets (per tenant), '
-        + 'index/* of the dshsa tables, cells/* and connectors/* objects of the state bucket, the dshsa worker runtime and its endpoints, and '
-        + 'Anthropic inference profiles/models in any region (global cross-region inference routes across regions).'),
+        + 'index/* of the dshsa tables, cells/* and connectors/* objects of the state bucket, the dshsa worker runtimes and their endpoints, and '
+        + 'Anthropic and OpenAI inference profiles/models in any region (global cross-region inference routes across regions).'),
     ], true)
     NagSuppressions.addResourceSuppressions(executionRole, [
       why('AwsSolutions-IAM5', 'ecr:GetAuthorizationToken has no resource scope; log stream writes are limited to the /dshsa/host log group.'),

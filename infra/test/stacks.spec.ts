@@ -1,13 +1,14 @@
-import { App, Aspects } from 'aws-cdk-lib'
+import { Aspects } from 'aws-cdk-lib'
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions'
 import { AwsSolutionsChecks } from 'cdk-nag'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ACCOUNT, compose } from '../lib/compose.ts'
+import { testApp } from './test-app.ts'
 
 let stacks: Awaited<ReturnType<typeof compose>>
 let shared: Template, panel: Template
 beforeAll(async () => {
-  const app = new App({ context: { '@aws-cdk/core:defaultCrossStackReferences': 'strong' } })
+  const app = testApp()
   stacks = await compose(app, { account: ACCOUNT, stubsOnly: true })
   Aspects.of(app).add(new AwsSolutionsChecks())
   app.synth()
@@ -86,7 +87,10 @@ describe('dshsa stacks', () => {
     const policies = JSON.stringify(panel.findResources('AWS::IAM::Policy'))
     expect(policies).toContain('/tenants/*/*/*/.claude/*')
     expect(policies).not.toContain('cells/*/tickets')
-    expect(policies).toContain('"s3:prefix":["tenants/*/*/*/.claude/*"]')
+    expect(policies).toContain('"s3:prefix":["tenants/*/*/*/.claude/*","tenants/*/*/*/.codex/sessions/*"]')
+    // v7 Codex rollouts only: not .codex/config.toml, installation_id or skills/.
+    expect(policies).toContain('/tenants/*/*/*/.codex/sessions/*')
+    expect(policies).not.toMatch(/\.codex\/\*/)
   })
 
   it('routes setup and admin paths to their own Lambdas, all behind the JWT authorizer', () => {

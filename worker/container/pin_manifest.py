@@ -11,7 +11,7 @@ images, so a hand-written list would go stale. Sources, in this order (the pinne
   - configuration and CA files opened at run time;
   - the agent's first turn: the Agent SDK modules (and their dependencies) that agent.py has not imported before it
     listens (the SDK is imported lazily, on the first turn), then, last and largest, the Claude CLI binary the SDK spawns,
-    found the way the SDK finds it.
+    found the way the SDK finds it. In the codex image (DSHSA_AGENT=codex): rg, then the codex binary.
 Deduplicated by inode. Only files that root owns and nobody else can write, along a path of such directories and outside
 the agent's writable trees, are listed: the pinner reads them as root. Any other path is dropped with a warning.
 Usage: python3.12 -E -s pin_manifest.py <output> (not -I: it implies -P, and this script imports pinner from its own directory)
@@ -48,6 +48,9 @@ FILES = ["/etc/ld.so.cache", "/etc/nsswitch.conf", "/etc/passwd", "/etc/group", 
          "/etc/pki/tls/openssl.cnf", "/etc/gitconfig"]
 
 AGENT = "/app/agent.py"
+# The image's agent (Dockerfile target ENV). The codex image starts the static codex binary (and rg) instead of the Agent SDK.
+AGENT_TYPE_ENV = "DSHSA_AGENT"
+CODEX_PROGRAMS = ["rg", "codex"]  # codex (~277 MB) last: the pinner's cap drops the tail first
 AGENT_INTERPRETER = "python3.12"  # entrypoint.sh: `python3.12 /app/agent.py`, PYTHONPATH=/app
 AGENT_FILES = ["/etc/hosts", "/etc/localtime"]  # opened by the CLI at start (with the CA bundle in FILES)
 # Never listed: the agent (uid 1000) can write there, or they are not files of the image.
@@ -264,8 +267,14 @@ def dedupe(paths: list[str]) -> list[str]:
     return out
 
 
-def first_turn(agent: str = AGENT, interpreter: str = AGENT_INTERPRETER) -> list[str]:
-    """The agent's first-turn files: SDK modules and their libraries first, the (large) CLI binary last."""
+def first_turn(agent: str = AGENT, interpreter: str = AGENT_INTERPRETER, agent_type: str | None = None) -> list[str]:
+    """The agent's first-turn files: SDK modules and their libraries first, the (large) CLI binary last. The codex agent
+    imports nothing lazily (codex_runner is stdlib + what agent.py loaded): its first turn starts the codex binary."""
+    if (agent_type or os.environ.get(AGENT_TYPE_ENV, "claude")) == "codex":
+        bins = [path for path in (which(name) for name in CODEX_PROGRAMS) if path]
+        if len(bins) < len(CODEX_PROGRAMS):
+            print("pin_manifest: the codex binaries were not all found; the first turn is not fully probed", file=sys.stderr)
+        return [*with_libraries(list(AGENT_FILES)), *[p for b in bins for p in (b, *ldd(b))]]
     files, cli = sdk_files(agent, interpreter)
     return [*with_libraries([*files, *AGENT_FILES]), *([cli] if cli else []), *(ldd(cli) if cli else [])]
 

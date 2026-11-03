@@ -441,3 +441,104 @@ async def test_failed_preparation_is_retried_before_any_turn(tmp_path):
     w.nudge()
     await drain(w)
     assert len(attempts) == 2 and len(turns) == 1 and not store.unread()
+
+
+# ---- v7: model + effort, agent check, skill pruning, retry resend (claude-worker-model-effort) -----------------------
+def options(config, resume=False):
+    return agent_core.sdk_options(config, repo_dir="/r", config_dir="/c", session="s-1", resume=resume)
+
+
+def test_sdk_options_carry_model_and_effort():
+    out = options({"model": "global.anthropic.claude-sonnet-5-5", "effort": "low"})
+    assert out["model"] == "global.anthropic.claude-sonnet-5-5" and out["effort"] == "low"
+    assert out["session_id"] == "s-1" and "resume" not in out
+    assert options({}, resume=True)["resume"] == "s-1"
+
+
+@pytest.mark.parametrize("effort", ["low", "medium", "high", "xhigh", "max"])
+def test_sdk_options_accept_every_claude_effort(effort):
+    assert options({"effort": effort})["effort"] == effort
+
+
+def test_sdk_options_without_effort_leave_the_cli_default():
+    out = options({"model": "global.anthropic.claude-opus-5-5"})
+    assert "effort" not in out and out["model"] == "global.anthropic.claude-opus-5-5"
+    assert options({"model": ""})["model"] is None
+
+
+@pytest.mark.parametrize("effort", ["none", "ultra", "HIGH", 3])
+def test_sdk_options_drop_an_unknown_effort_and_say_so(effort, capsys):
+    assert "effort" not in options({"effort": effort})
+    lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert [line["event"] for line in lines] == ["effort_ignored"]
+
+
+def test_sdk_options_filter_the_cell_env():
+    env = options({"env": {"AWS_BEARER_TOKEN_BEDROCK": "x", "AWS_REGION": "us-east-1", "HOME": "/x", "CLAUDE_CONFIG_DIR": "/y", "FOO": "1"}})["env"]
+    assert env == {"FOO": "1", "CLAUDE_CONFIG_DIR": "/c", "CLAUDE_CODE_USE_BEDROCK": "1"}
+
+
+def with_agent(keys, agent, action="start"):
+    req = request(keys, action, inputs=[inp(1)])
+    req["config"]["agent"] = agent
+    return req
+
+
+async def test_gateway_rejects_another_agent_before_any_side_effect(keys, tmp_path):
+    mounter = FakeMounter()
+    gw, agent = gateway(keys, tmp_path, mounter)
+    result = await gw.handle(with_agent(keys, "codex"))
+    assert result["ok"] is False and result["error"] == "bad_request" and "claude" in result["message"]
+    assert mounter.mounts == 0 and agent.calls == [] and not (tmp_path / ".dshsa").exists()
+    assert result[contracts.WORKER_VERSION_FIELD] == VERSION
+
+
+@pytest.mark.parametrize("agent", ["claude", None])
+async def test_gateway_accepts_its_own_agent_or_none(keys, tmp_path, agent):
+    gw, _ = gateway(keys, tmp_path)
+    req = with_agent(keys, agent) if agent else request(keys, inputs=[inp(1)])
+    assert (await gw.handle(req))["ok"] is True
+
+
+async def test_codex_gateway_rejects_a_claude_ticket(keys, tmp_path):
+    gw = Gateway(verifier=keys.verifier(), mounter=FakeMounter(), agent=FakeAgent(), store=Store(str(tmp_path)), version=VERSION, agent_type="codex")
+    assert (await gw.handle(with_agent(keys, "claude")))["error"] == "bad_request"
+    assert (await gw.handle(with_agent(keys, "codex")))["ok"] is True
+
+
+def test_write_skills_keeps_exactly_the_configured_skills(tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_text("x")
+    agent_core.write_skills(str(tmp_path), [{"name": "a", "content": "A"}, {"name": "b", "content": "B"}])
+    (tmp_path / "skills" / "linked").symlink_to(outside, target_is_directory=True)
+    (tmp_path / "skills" / ".system").mkdir()
+    agent_core.write_skills(str(tmp_path), [{"name": "a", "content": "A2"}])
+    assert sorted(p.name for p in (tmp_path / "skills").iterdir()) == ["a"]
+    assert (tmp_path / "skills" / "a" / "SKILL.md").read_text() == "A2"
+    assert (outside / "keep.txt").exists()  # a symlinked entry is unlinked, never followed
+
+
+def failing_runner(prompts, delivered_before_failure):
+    async def runner(w, prompt):
+        prompts.append(prompt)
+        if len(prompts) > 1:
+            return
+        if delivered_before_failure is not None:
+            w.turn.delivered = False
+            if delivered_before_failure:
+                w.turn.delivered = True
+        raise RuntimeError("ECONNRESET 503")
+    return runner
+
+
+@pytest.mark.parametrize("delivered, resent", [(False, True), (True, False), (None, False)])
+async def test_a_retry_resends_inputs_that_never_reached_the_agent(tmp_path, delivered, resent):
+    prompts = []
+    w, store, cp, sleeps = worker(tmp_path, failing_runner(prompts, delivered))
+    store.append([inp(1, text="please fix the login bug")])
+    w.run(ASSIGNMENT, recovery=False)
+    await drain(w)
+    assert len(prompts) == 2 and sleeps == [15]
+    assert ("please fix the login bug" in prompts[1]) is resent
+    assert "passing reason" in prompts[1]

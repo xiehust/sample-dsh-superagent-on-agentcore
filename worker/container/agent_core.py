@@ -14,12 +14,14 @@ import glob
 import json
 import os
 import re
+import shutil
 import time
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
+import dshsa_contracts as contracts
 import render
 from inbox import Store
 
@@ -29,6 +31,12 @@ RETRY_DELAYS = (15, 30, 60)
 BUILTIN_TOOLS = ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "Bash", "BashOutput", "KillShell", "WebFetch", "WebSearch",
                  "TodoWrite", "Task", "NotebookEdit", "Skill"]
 DSHSA_TOOLS = ["report", "ack", "handback", "thread_follow", "thread_unrelated", "read"]
+# claude_agent_sdk 0.2.176 EffortLevel (CLI --effort); the catalog allows the same set for every Claude model.
+CLAUDE_EFFORTS = ("low", "medium", "high", "xhigh", "max")
+
+
+def log(event: str, **fields: Any) -> None:
+    print(json.dumps({"component": "agent", "event": event, **fields}), flush=True)
 
 
 def transient(error: BaseException | str) -> bool:
@@ -75,6 +83,10 @@ class TurnContext:
         self.reported = False
         self.last_text = ""
         self.steered: list[str] = []
+        self.effort_logged = False
+        # Does the agent hold this attempt's prompt? None: the runner does not say (a retry says "continue", as before);
+        # False: it does not, so a retry sends the prompt again; True: it does. Runners that opt in set False, then True.
+        self.delivered: bool | None = None
 
 
 class Worker:
@@ -156,6 +168,19 @@ class Worker:
             self.turn.steered += [item["id"] for item in fresh]
         return render.steer_context(fresh)
 
+    async def steer_with(self, deliver: Callable[[str], Awaitable[bool]]) -> bool:
+        """Steering for agents whose injection can fail (Codex turn/steer): inputs are marked read only once delivered, so a
+        failed steer leaves them for the next turn (at least once, never lost)."""
+        fresh = await asyncio.to_thread(self.store.unread)
+        if not fresh or self.stopped:
+            return False
+        if not await deliver(render.steer_context(fresh)):
+            return False
+        await self.take(fresh)
+        if self.turn:
+            self.turn.steered += [item["id"] for item in fresh]
+        return True
+
     async def one_turn(self) -> None:
         inputs = await asyncio.to_thread(self.store.unread)
         header = None
@@ -166,7 +191,7 @@ class Worker:
             header = render.assignment_message(config.get("ticket", {}), self.recovery, card=not carded)
         await self.take(inputs)
         self.header_due = False
-        prompt = render.turn_prompt(inputs, header)
+        prompt = original = render.turn_prompt(inputs, header)
         self.status, self.turn = "running", TurnContext()
         await asyncio.to_thread(self.store.update_state, assignmentId=self.assignment_id, clean=False, turnStartedAt=now())
         reason = "idle"
@@ -184,7 +209,12 @@ class Worker:
                     if attempt < len(RETRY_DELAYS) and transient(error):
                         print(json.dumps({"component": "agent", "event": "turn_retry", "attempt": attempt + 1, "error": str(error)[:300]}), flush=True)
                         await self.sleep(RETRY_DELAYS[attempt])
-                        prompt = f"Your last turn failed for a passing reason ({str(error)[:200]}). Continue the assignment where it stopped."
+                        note = f"Your last turn failed for a passing reason ({str(error)[:200]})."
+                        if self.turn.delivered is False:  # the inputs were taken from the inbox but never reached the agent: send them again
+                            prompt = f"{note} Its messages did not reach you; here they are again.\n\n{original}"
+                        else:
+                            prompt = f"{note} Continue the assignment where it stopped."
+                        self.turn.delivered = None
                         continue
                     reason = f"error:{type(error).__name__}"
                     await self.cp.event("report", {"state": "failed", "text": f"The worker failed: {str(error)[:1000]}"})
@@ -286,22 +316,20 @@ async def sdk_runner(worker: Worker, prompt: str) -> None:
 
     server = create_sdk_mcp_server("dshsa", tools=[make(name) for name in DSHSA_TOOLS])
 
-    async def on_tool(_input: Any, _tool_use_id: str | None, _context: Any) -> dict[str, Any]:
+    async def on_tool(hook_input: Any, _tool_use_id: str | None, _context: Any) -> dict[str, Any]:
+        if worker.turn and not worker.turn.effort_logged:
+            worker.turn.effort_logged = True  # the effort in effect after any downgrade for the model: proof that --effort arrived
+            effort = hook_input.get("effort") if isinstance(hook_input, dict) else None
+            log("turn_effort", level=effort.get("level") if isinstance(effort, dict) else None, model=config.get("model") or None)
         extra = await worker.steer()
         return {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": extra}} if extra else {}
 
     session = render.sdk_session_id(ticket_key)
     resume = await asyncio.to_thread(worker.session_exists, session)
-    env = {k: v for k, v in (config.get("env") or {}).items() if not k.startswith("AWS_") and k not in ("CLAUDE_CONFIG_DIR", "HOME")}
-    options = ClaudeAgentOptions(
-        cwd=worker.repo_dir, model=config.get("model") or None, permission_mode="bypassPermissions",
-        system_prompt={"type": "preset", "preset": "claude_code", "append": config.get("systemPrompt", "")},
-        setting_sources=["user", "project"], mcp_servers={"dshsa": server},
-        allowed_tools=BUILTIN_TOOLS + [f"mcp__dshsa__{name}" for name in DSHSA_TOOLS],
-        hooks={"PostToolUse": [HookMatcher(hooks=[on_tool])]},
-        env={**env, "CLAUDE_CONFIG_DIR": worker.config_dir, "CLAUDE_CODE_USE_BEDROCK": "1"},
-        **({"resume": session} if resume else {"session_id": session}),
-    )
+    options = ClaudeAgentOptions(**sdk_options(config, repo_dir=worker.repo_dir, config_dir=worker.config_dir, session=session, resume=resume),
+                                 mcp_servers={"dshsa": server}, hooks={"PostToolUse": [HookMatcher(hooks=[on_tool])]})
+    if worker.turn:
+        worker.turn.delivered = False
     started = monotonic()
     async with ClaudeSDKClient(options=options) as client:  # connect spawns the CLI and waits for its initialize answer
         connect_ms, answered = int((monotonic() - started) * 1000), False
@@ -313,6 +341,8 @@ async def sdk_runner(worker: Worker, prompt: str) -> None:
                 print(json.dumps({"component": "agent", "event": "cli_started", "ms": int((monotonic() - started) * 1000), "connect_ms": connect_ms,
                                   "first": not worker.cli_started}), flush=True)
                 worker.cli_started = True
+            if isinstance(message, AssistantMessage | ResultMessage) and worker.turn:
+                worker.turn.delivered = True  # the CLI answered the prompt: it is in the session transcript
             if isinstance(message, AssistantMessage):
                 text = "\n".join(block.text for block in message.content if isinstance(block, TextBlock)).strip()
                 if text and worker.turn:
@@ -321,12 +351,47 @@ async def sdk_runner(worker: Worker, prompt: str) -> None:
                 raise RuntimeError(f"turn failed: {message.subtype} {message.api_error_status or ''} {(message.errors or '')}"[:500])
 
 
+def sdk_options(config: dict[str, Any], *, repo_dir: str, config_dir: str, session: str, resume: bool) -> dict[str, Any]:
+    """ClaudeAgentOptions keyword arguments for one turn, from the ticket's current config (no SDK import: unit-testable)."""
+    env = {k: v for k, v in (config.get("env") or {}).items() if not k.startswith("AWS_") and k not in ("CLAUDE_CONFIG_DIR", "HOME")}
+    options: dict[str, Any] = dict(
+        cwd=repo_dir, model=config.get("model") or None, permission_mode="bypassPermissions",
+        system_prompt={"type": "preset", "preset": "claude_code", "append": config.get("systemPrompt", "")},
+        setting_sources=["user", "project"], allowed_tools=BUILTIN_TOOLS + [f"mcp__dshsa__{name}" for name in DSHSA_TOOLS],
+        env={**env, "CLAUDE_CONFIG_DIR": config_dir, "CLAUDE_CODE_USE_BEDROCK": "1"},
+        **({"resume": session} if resume else {"session_id": session}),
+    )
+    effort = config.get("effort")
+    passed = contracts.worker_effort("claude", options["model"] or "", effort) if isinstance(effort, str) else None
+    if passed in CLAUDE_EFFORTS:  # the catalog's choice, and one the SDK accepts (a model outside the catalog may get any Effort)
+        options["effort"] = passed
+    elif effort is not None:  # the host validates against the catalog; an unknown value never fails a turn
+        log("effort_ignored", effort=str(effort)[:20], model=options["model"])
+    return options
+
+
+def skill_name(raw: str) -> str:
+    return re.sub(r"[^a-z0-9-]", "-", (raw or "").lower()).strip("-")
+
+
 def write_skills(config_dir: str, skills: list[dict[str, str]]) -> None:
-    for skill in skills or []:
-        name = re.sub(r"[^a-z0-9-]", "-", skill.get("name", "").lower()).strip("-")
-        if not name:
-            continue
-        path = os.path.join(config_dir, "skills", name)
+    """`config_dir/skills` holds exactly the config's skills: each is rewritten whole and every other entry is removed."""
+    root = os.path.join(config_dir, "skills")
+    wanted = {name: skill for skill in skills or [] if (name := skill_name(skill.get("name", "")))}
+    if os.path.isdir(root):
+        for entry in os.listdir(root):
+            if entry in wanted:
+                continue
+            path = os.path.join(root, entry)
+            if os.path.isdir(path) and not os.path.islink(path):
+                shutil.rmtree(path)
+            else:
+                os.unlink(path)  # a file or a symlink: never followed
+            log("skill_removed", name=entry[:80])
+    for name, skill in wanted.items():
+        path = os.path.join(root, name)
+        if os.path.islink(path):
+            os.unlink(path)
         os.makedirs(path, exist_ok=True)
         with open(os.path.join(path, "SKILL.md"), "w") as f:
             f.write(skill.get("content", ""))

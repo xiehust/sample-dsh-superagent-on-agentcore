@@ -39,10 +39,12 @@ from inbox import Store  # noqa: E402
 from repo import Repo  # noqa: E402
 
 WORK = os.environ.get("WORK_DIR", "/mnt/work")
-# Contract v5 §4.10: the working copy is on LOCAL disk; the AP keeps .claude/, .dshsa/, out/ and repo.bundle.
+# The agent of this image (contracts WorkerType): `claude` (Agent SDK) or `codex` (codex app-server), set by the image target.
+AGENT = os.environ.get("DSHSA_AGENT", "claude")
+# Contract v5 §4.10: the working copy is on LOCAL disk; the AP keeps .claude/ (or .codex/), .dshsa/, out/ and repo.bundle.
 REPO = os.environ.get("LOCAL_REPO_DIR", "/home/agent/work/repo")
 BUNDLE = os.path.join(WORK, "repo.bundle")
-CONFIG_DIR = os.path.join(WORK, ".claude")
+CONFIG_DIR = os.path.join(WORK, ".codex" if AGENT == "codex" else ".claude")
 PROXY = os.environ.get("CP_PROXY", "http://127.0.0.1:8090/cp")
 
 
@@ -82,7 +84,12 @@ async def main() -> None:
 
     cfg = store.config()
     cp = agent_core.ControlPlane(post, cfg.get("ticketKey", ""), lambda: worker.assignment_id)
-    worker = agent_core.Worker(store, cp, agent_core.sdk_runner, repo_dir=REPO, config_dir=CONFIG_DIR,
+    if AGENT == "codex":
+        import codex_runner  # only in the codex image
+        runner = codex_runner.CodexRunner(codex_home=CONFIG_DIR, repo_dir=REPO)
+    else:
+        runner = agent_core.sdk_runner
+    worker = agent_core.Worker(store, cp, runner, repo_dir=REPO, config_dir=CONFIG_DIR,
                                checkpoint=lambda: asyncio.to_thread(checkpoint_repo))
 
     async def ping(_r: web.Request) -> web.Response:
@@ -141,7 +148,7 @@ async def main() -> None:
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     await web.TCPSite(runner, "127.0.0.1", 8081).start()
-    log("listening", uid=os.getuid())
+    log("listening", uid=os.getuid(), agent=AGENT)
     await asyncio.Event().wait()
 
 

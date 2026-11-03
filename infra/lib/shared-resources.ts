@@ -107,6 +107,8 @@ export interface WorkerOutputs {
   readonly fileSystemId: string
   /** SG of the worker-api Lambda; host.ts allows TCP 8080 from it (token refresh, design §4.3). */
   readonly workerApiSg: ec2.ISecurityGroup
+  /** v7: the Codex runtime (`dshsa_worker_codex`), absent when disabled; host gets invoke/stop on it and `RUNTIME_ARN_CODEX`. */
+  readonly codexRuntimeArn?: string | undefined
 }
 
 export interface HostModuleProps extends ModuleProps {
