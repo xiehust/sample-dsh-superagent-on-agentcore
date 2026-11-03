@@ -1,6 +1,7 @@
 /**
  * Codex rollout lines the 0.166.0 probe (`codex-probe-rollout.jsonl`) does not contain, written in the probe's exact envelopes:
  * a second turn without `turn_context`, commentary, a failed tool call, an item type the renderer does not know, and bad lines.
+ * Shell commands and file edits come from the live L1 capture instead (`codex-l1-lines.json`).
  */
 import type { TranscriptEntry } from '../../src/types.ts'
 
@@ -15,7 +16,7 @@ export const CODEX_EXTRA: TranscriptEntry[] = [
   item(32, { type: 'AgentMessage', id: 'm2', content: [{ type: 'Text', text: 'Running the unit tests first.' }], phase: 'commentary' }),
   item(33, { type: 'DynamicToolCall', id: 'call_x', tool: 'report', arguments: { status: 'ready' }, status: 'failed',
     content_items: [{ type: 'inputText', text: 'error: ticket is not running' }], success: false }),
-  item(34, { type: 'CommandExecution', id: 'cmd1', command: 'pnpm test', exit_code: 0 }),
+  item(34, { type: 'McpToolCall', id: 'mcp1', server: 'docs', tool: 'search' }),
   { timestamp: at(35), ordinal: 35, type: 'event_msg', payload: null },
   { timestamp: at(36), ordinal: 36, type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'raw' }] } },
   item(37, { type: 'AgentMessage', id: 'm3', content: [{ type: 'Text', text: 'All 12 tests pass.' }], phase: 'final_answer' }),

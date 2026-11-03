@@ -1,0 +1,248 @@
+[
+ {
+  "timestamp": "2026-11-03T12:05:31.711Z",
+  "ordinal": 11,
+  "type": "response_item",
+  "payload": {
+   "type": "function_call",
+   "status": "completed",
+   "id": "fc_da9d9b5170f95036accd1e0e869ad11a",
+   "name": "report",
+   "arguments": "{\"state\":\"progress\",\"summary\":\"probe global.openai.gpt-6.1-terra\"}",
+   "call_id": "call_6439de487d9f5343ab927c8798cbae60",
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14c-d78f-7b72-8cbe-6b81efcccbe7"
+   }
+  },
+  "metadata": {
+   "client_authored": false,
+   "user_input_order": 1
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:31.720Z",
+  "ordinal": 14,
+  "type": "response_item",
+  "payload": {
+   "type": "function_call_output",
+   "id": "fco_01a1a14c-ddc7-71b2-b2d5-d82d9f35ae11",
+   "call_id": "call_6439de487d9f5343ab927c8798cbae60",
+   "output": "{\"status\": 200, \"ok\": true}",
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14c-d78f-7b72-8cbe-6b81efcccbe7",
+    "create_time": 1793707531.7199523
+   }
+  },
+  "metadata": {
+   "client_authored": false,
+   "fallback_token_limit_override": 12000
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:47.010Z",
+  "ordinal": 29,
+  "type": "response_item",
+  "payload": {
+   "type": "function_call",
+   "status": "completed",
+   "id": "fc_000f7752204c5d0fa70295aa1f3b4cbb",
+   "name": "exec_command",
+   "arguments": "{\"cmd\":\"ls -a\",\"workdir\":\"<root>/1-terra/repo\"}",
+   "call_id": "call_06fcb87e922c59828dcc4f96e7395929",
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14d-12b6-7cd0-993b-87a81c6c0e2c"
+   }
+  },
+  "metadata": {
+   "client_authored": false,
+   "user_input_order": 4
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:47.203Z",
+  "ordinal": 31,
+  "type": "event_msg",
+  "payload": {
+   "type": "item_completed",
+   "thread_id": "01a1a14c-d777-7550-b7ad-9b7518c4d788",
+   "turn_id": "01a1a14d-12b6-7cd0-993b-87a81c6c0e2c",
+   "item": {
+    "type": "CommandExecution",
+    "id": "call_06fcb87e922c59828dcc4f96e7395929",
+    "process_id": "38600",
+    "command": [
+     "/bin/zsh",
+     "-lc",
+     "ls -a"
+    ],
+    "cwd": "file://<root>/1-terra/repo",
+    "parsed_cmd": [
+     {
+      "type": "list_files",
+      "cmd": "ls -a",
+      "path": null
+     }
+    ],
+    "source": "unified_exec_startup",
+    "status": "completed",
+    "aggregated_output": ".\n..\n.agents\n.git\nREADME.md\n",
+    "exit_code": 0,
+    "duration": {
+     "secs": 0,
+     "nanos": 25879278
+    }
+   },
+   "started_at_ms": 1793707547177,
+   "completed_at_ms": 1793707547203
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:47.206Z",
+  "ordinal": 32,
+  "type": "response_item",
+  "payload": {
+   "type": "function_call_output",
+   "id": "fco_01a1a14d-1a46-74c1-be4e-b5e88a1f2f9c",
+   "call_id": "call_06fcb87e922c59828dcc4f96e7395929",
+   "output": "Chunk ID: b0d28f\nWall time: 0.0259 seconds\nProcess exited with code 0\nOriginal token count: 7\nOutput:\n.\n..\n.agents\n.git\nREADME.md\n",
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14d-12b6-7cd0-993b-87a81c6c0e2c",
+    "create_time": 1793707547.2065234
+   }
+  },
+  "metadata": {
+   "client_authored": false,
+   "fallback_token_limit_override": 12000
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:48.847Z",
+  "ordinal": 34,
+  "type": "response_item",
+  "payload": {
+   "type": "custom_tool_call",
+   "id": "ctc_e109f7d8eccd5b098867d747a7e3a8a3",
+   "status": "completed",
+   "call_id": "call_54b7447202135680aef1858beae806cc",
+   "name": "apply_patch",
+   "input": "*** Begin Patch\n*** Add File: NOTES.md\n+hello\n*** End Patch\n",
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14d-12b6-7cd0-993b-87a81c6c0e2c"
+   }
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:48.852Z",
+  "ordinal": 36,
+  "type": "event_msg",
+  "payload": {
+   "type": "item_completed",
+   "thread_id": "01a1a14c-d777-7550-b7ad-9b7518c4d788",
+   "turn_id": "01a1a14d-12b6-7cd0-993b-87a81c6c0e2c",
+   "item": {
+    "type": "FileChange",
+    "id": "call_54b7447202135680aef1858beae806cc",
+    "changes": {
+     "<root>/1-terra/repo/NOTES.md": {
+      "type": "add",
+      "content": "hello\n"
+     }
+    },
+    "status": "completed",
+    "stdout": "Success. Updated the following files:\nA NOTES.md\n",
+    "stderr": ""
+   },
+   "started_at_ms": 1793707548851,
+   "completed_at_ms": 1793707548852
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:48.855Z",
+  "ordinal": 37,
+  "type": "response_item",
+  "payload": {
+   "type": "custom_tool_call_output",
+   "id": "ctco_01a1a14d-20b7-7990-b58c-2752a75c2a5f",
+   "call_id": "call_54b7447202135680aef1858beae806cc",
+   "output": "Exit code: 0\nWall time: 0 seconds\nOutput:\nSuccess. Updated the following files:\nA NOTES.md\n",
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14d-12b6-7cd0-993b-87a81c6c0e2c",
+    "create_time": 1793707548.8553126
+   }
+  },
+  "metadata": {
+   "client_authored": false,
+   "fallback_token_limit_override": 12000
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:50.201Z",
+  "ordinal": 39,
+  "type": "response_item",
+  "payload": {
+   "type": "function_call",
+   "status": "completed",
+   "id": "fc_0081e605c55f53dcab2c168479401cb5",
+   "name": "report",
+   "arguments": "{\"state\":\"progress\",\"summary\":\"edited\"}",
+   "call_id": "call_9392f4be4ed55d8e9abf6daa031fac4c",
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14d-12b6-7cd0-993b-87a81c6c0e2c"
+   }
+  },
+  "metadata": {
+   "client_authored": false,
+   "user_input_order": 5
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:50.301Z",
+  "ordinal": 42,
+  "type": "response_item",
+  "payload": {
+   "type": "function_call_output",
+   "id": "fco_01a1a14d-265d-7c21-b626-d543951f04c9",
+   "call_id": "call_9392f4be4ed55d8e9abf6daa031fac4c",
+   "output": "{\"status\": 200, \"ok\": true}",
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14d-12b6-7cd0-993b-87a81c6c0e2c",
+    "create_time": 1793707550.3010104
+   }
+  },
+  "metadata": {
+   "client_authored": false,
+   "fallback_token_limit_override": 12000
+  }
+ },
+ {
+  "timestamp": "2026-11-03T12:05:51.944Z",
+  "ordinal": 55,
+  "type": "response_item",
+  "payload": {
+   "type": "message",
+   "id": "msg_01a1a14d-2cc8-7f00-9dad-8ac27e1c27ed",
+   "role": "developer",
+   "content": [
+    {
+     "type": "input_text",
+     "text": "<dshsa-instructions>The operator updated your instructions for this ticket. They replace the developer instructions you were given earlier:\n\nYou are the dshsa probe worker, second edition.</dshsa-instructions>"
+    }
+   ],
+   "internal_chat_message_metadata_passthrough": {
+    "turn_id": "01a1a14d-2cb8-72c0-91b4-d643a4383a37",
+    "create_time": 1793707551.9445653,
+    "content_item_kinds": [
+     "additional_content.dshsa-instructions"
+    ],
+    "content_item_metadata": [
+     {
+      "provenance": {
+       "type": "harness",
+       "hook": false
+      }
+     }
+    ]
+   }
+  }
+ }
+]

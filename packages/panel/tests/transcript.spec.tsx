@@ -4,6 +4,7 @@ import { codexMessages, type Shown } from '../src/transcript.tsx'
 import type { TranscriptEntry } from '../src/types.ts'
 import { api, useFakeApi } from './fake-api.ts'
 import { CODEX_EXTRA } from './fixtures/codex-extra.ts'
+import L1 from './fixtures/codex-l1-lines.json'
 import probe from './fixtures/codex-probe-rollout.jsonl?raw'
 import { renderPanel } from './render.tsx'
 
@@ -13,6 +14,9 @@ const PROBE = probe.split('\n').filter(Boolean).map(line => JSON.parse(line) as 
 const outline = (items: Shown[]) => items.map(item => item.kind === 'turn' ? `[${item.label}${item.detail ? ` | ${item.detail}` : ''}]`
   : `${item.role}: ${item.parts.map(part => part.kind === 'text' ? `${part.tone ? `(${part.tone}) ` : ''}${part.text}`
     : part.kind === 'tool' ? `tool ${part.name} ${part.detail.replace(/\s+/g, '')}` : part.kind === 'result' ? `result${part.error ? '!' : ''} ${part.detail}`
+      : part.kind === 'command' ? `command ${part.command} exit ${part.exitCode} ${JSON.stringify(part.detail)}`
+      : part.kind === 'files' ? `files ${part.files.map(file => `${file.change} ${file.path}`).join(', ')}${part.error ? '!' : ''} ${JSON.stringify(part.detail)}`
+      : part.kind === 'note' ? `note ${part.text} ${JSON.stringify(part.detail)}`
       : part.kind).join(' + ')}`)
 
 describe('Codex transcript', () => {
@@ -33,11 +37,34 @@ describe('Codex transcript', () => {
       'user: Now run the tests.',
       'assistant: (commentary) Running the unit tests first.',
       'tool: tool report {"status":"ready"} + result! error: ticket is not running',
-      'tool: tool CommandExecution {"type":"CommandExecution","id":"cmd1","command":"pnpmtest","exit_code":0}',
+      'tool: tool McpToolCall {"type":"McpToolCall","id":"mcp1","server":"docs","tool":"search"}',
       'assistant: All 12 tests pass.',
       '[Turn 2 finished in 42 s]',
     ])
     expect(() => codexMessages([{ type: 'event_msg' }, { type: 'turn_context', payload: 'x' } as never, {} as never, null as never, 7 as never])).not.toThrow()
+  })
+
+  it('renders the L1 live shapes: shell command, file edit, and the operator instructions note; skips raw tool calls', () => {
+    expect(outline(codexMessages(L1 as TranscriptEntry[]))).toEqual([
+      'tool: command ls -a exit 0 ".\\n..\\n.agents\\n.git\\nREADME.md\\n"',
+      'tool: files add NOTES.md "Added NOTES.md\\n+hello"',
+      'system: note The operator updated the instructions for this ticket. "You are the dshsa probe worker, second edition."',
+    ])
+  })
+
+  it('shows a failing command, an update diff, a rename, and deleted text marked as deleted', () => {
+    const line = (item: Record<string, unknown>): TranscriptEntry => ({ type: 'event_msg', ordinal: 1, payload: { type: 'item_completed', item } })
+    const [command, files] = codexMessages([
+      line({ type: 'CommandExecution', command: ['/bin/bash', '-c', 'pnpm test'], aggregated_output: 'FAIL', exit_code: 1 }),
+      line({ type: 'FileChange', changes: { '/mnt/work/repo/src/a.ts': { type: 'update', unified_diff: '@@ -1 +1 @@\n-a\n+b', move_path: null },
+        '/mnt/work/repo/src/b.ts': { type: 'update', unified_diff: '', move_path: '/mnt/work/repo/src/c.ts' },
+        '/mnt/work/repo/old.md': { type: 'delete', content: 'gone\nfor good\n' } }, status: 'failed', stderr: 'conflict' }),
+    ])
+    expect(outline([command!, files!])).toEqual([
+      'tool: command pnpm test exit 1 "FAIL"',
+      'tool: files update src/a.ts, update src/b.ts → src/c.ts, delete old.md! "Updated src/a.ts\\n@@ -1 +1 @@\\n-a\\n+b\\n\\n'
+        + 'Updated src/b.ts → src/c.ts\\n\\nDeleted old.md\\n-gone\\n-for good\\n\\nstderr:\\nconflict"',
+    ])
   })
 
   describe('on the ticket page', () => {

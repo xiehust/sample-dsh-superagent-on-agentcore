@@ -276,6 +276,9 @@ main:focus { outline: none; }
 .message:first-child { border-top: 0; }
 .message[data-role="assistant"] { border-left-color: var(--signal); }
 .message[data-role="tool"] { border-left-color: var(--st-idle); }
+.message[data-role="system"] { border-left-color: var(--st-person); }
+.note .plain { margin: 2px 0; color: var(--muted); }
+.fold-command pre, .fold-files pre { max-height: 360px; overflow: auto; }
 .message-head { display: flex; gap: var(--s3); align-items: baseline; }
 .message-head .hint { font-variant-numeric: tabular-nums; }
 .role { font-weight: 650; text-transform: capitalize; }

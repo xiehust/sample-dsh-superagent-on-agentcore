@@ -1,6 +1,7 @@
 /**
  * Worker transcript viewer: Claude Agent SDK session entries, or Codex rollout lines (`view.agent === 'codex'`, contracts v7 §7),
- * rendered as plain text with tool calls collapsed. Codex line shapes: codex-worker design §12 (codex 0.166.0).
+ * rendered as plain text with tool calls collapsed. Codex line shapes: codex-worker design §12 and the L1 live capture
+ * (`worker/tests/live/results/codex-l1-2026-11-03.json`, codex 0.166.0).
  */
 import { useEffect, useState } from 'react'
 import { when } from './text.ts'
@@ -9,6 +10,12 @@ import { LoadState, useAction, usePanel } from './widgets.tsx'
 
 export type Part = { kind: 'text'; text: string; tone?: 'commentary' } | { kind: 'tool'; name: string; detail: string }
   | { kind: 'result'; detail: string; error: boolean } | { kind: 'thinking'; detail: string }
+  /** A Codex shell command: the command line, its exit code (undefined while unknown) and output. */
+  | { kind: 'command'; command: string; exitCode?: number; detail: string }
+  /** A Codex file edit: each changed path (relative to the repository) with `add` / `update` / `delete`, and the content or diff. */
+  | { kind: 'files'; files: { path: string; change: string }[]; detail: string; error: boolean }
+  /** A harness note, such as the operator's updated instructions; `detail` is the full text. */
+  | { kind: 'note'; text: string; detail: string }
 export interface Message { key: string; role: string; at?: string; parts: Part[] }
 /** A turn boundary of a Codex rollout: `label` names it ("Turn 2", "Turn 2 finished in 42 s"), `detail` its model and effort. */
 export interface TurnMark { key: string; label: string; detail?: string }
@@ -49,6 +56,52 @@ const texts = (value: unknown): string => Array.isArray(value)
   ? value.flatMap(item => typeof record(item)?.text === 'string' ? [record(item)!.text as string] : []).join('\n') : ''
 const seconds = (ms: number) => ms < 10_000 ? String(Number((ms / 1000).toFixed(2))) : String(Math.round(ms / 1000))
 
+/** `["/bin/zsh", "-lc", "ls -a"]` → `ls -a`; any other argv is joined with spaces. */
+function commandLine(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (!Array.isArray(value)) return ''
+  const argv = value.map(String)
+  return argv.length === 3 && /(^|\/)(ba|z|)sh$/.test(argv[0]!) && /^-l?c$/.test(argv[1]!) ? argv[2]! : argv.join(' ')
+}
+/** Paths are absolute in the worker; show them relative to the repository (`…/repo/src/a.ts` → `src/a.ts`). */
+const repoPath = (path: string) => { const at = path.lastIndexOf('/repo/'); return at >= 0 ? path.slice(at + '/repo/'.length) : path }
+const CHANGE_LABELS: Record<string, string> = { add: 'Added', update: 'Updated', delete: 'Deleted' }
+/** Lines of `text` marked like a diff (`+` added, `-` deleted), so a deleted file's text never reads as new content. */
+const marked = (text: string, mark: '+' | '-') => text.replace(/\n$/, '').split('\n').map(line => `${mark}${line}`).join('\n')
+/**
+ * A codex 0.166.0 `FileChange`: `changes` maps an absolute path to `{type: 'add', content}`, `{type: 'delete', content}` (the
+ * deleted text) or `{type: 'update', unified_diff, move_path}` (protocol schema `FileChange`; `add` seen live in L1).
+ */
+function fileChanges(item: Json): Part {
+  const changes = Object.entries(record(item.changes) ?? {}).map(([path, change]) => {
+    const value = record(change) ?? {}
+    const moved = str(value.move_path)
+    return { path: moved ? `${repoPath(path)} → ${repoPath(moved)}` : repoPath(path), change: str(value.type) ?? 'change', value }
+  })
+  const body = changes.map(({ path, change, value }) => {
+    const content = typeof value.content === 'string' ? value.content : ''
+    const text = change === 'update' ? str(value.unified_diff) ?? str(value.diff) ?? ''
+      : change === 'add' && content ? marked(content, '+') : change === 'delete' && content ? marked(content, '-') : content
+    return `${CHANGE_LABELS[change] ?? 'Changed'} ${path}${text ? `\n${text}` : ''}`
+  }).join('\n\n')
+  const stderr = str(item.stderr)
+  return { kind: 'files', files: changes.map(({ path, change }) => ({ path, change })),
+    detail: [body, stderr ? `stderr:\n${stderr}` : ''].filter(Boolean).join('\n\n'), error: item.status === 'failed' || item.success === false }
+}
+/** The operator's updated cell prompt, as the worker injects it (a developer message tagged `dshsa-instructions`). */
+const INSTRUCTIONS = /^<dshsa-instructions>([\s\S]*)<\/dshsa-instructions>$/
+function instructionsNote(payload: Json, key: string, at: string | undefined): Message | undefined {
+  if (payload.type !== 'message' || payload.role !== 'developer') return undefined
+  const text = texts(payload.content).trim()
+  const match = INSTRUCTIONS.exec(text)
+  if (!match) return undefined
+  // The worker prefixes the new prompt with a sentence to the model ("The operator updated your instructions…"); show the prompt.
+  const inner = match[1]!.trim()
+  const split = inner.indexOf('\n\n')
+  const detail = inner.startsWith('The operator updated') && split > 0 ? inner.slice(split + 2).trim() : inner
+  return { key, role: 'system', at, parts: [{ kind: 'note', text: 'The operator updated the instructions for this ticket.', detail }] }
+}
+
 /** One displayable item for a Codex `item_completed` line; unknown item types become a generic fold with the item JSON. */
 function codexItem(item: Json, key: string, at: string | undefined): Message | undefined {
   const parts: Part[] = []
@@ -62,14 +115,21 @@ function codexItem(item: Json, key: string, at: string | undefined): Message | u
       parts.push({ kind: 'tool', name: str(item.tool) ?? 'tool', detail: show(item.arguments ?? {}) },
         { kind: 'result', detail: texts(item.content_items), error: item.success === false })
       return { key, role: 'tool', at, parts }
+    case 'CommandExecution': {
+      const exitCode = typeof item.exit_code === 'number' ? item.exit_code : undefined
+      return { key, role: 'tool', at, parts: [{ kind: 'command', command: commandLine(item.command) || 'command',
+        ...exitCode === undefined ? {} : { exitCode }, detail: typeof item.aggregated_output === 'string' ? item.aggregated_output : '' }] }
+    }
+    case 'FileChange': return { key, role: 'tool', at, parts: [fileChanges(item)] }
     default: return { key, role: 'tool', at, parts: [{ kind: 'tool', name: str(item.type) ?? 'item', detail: show(item) }] }
   }
 }
 
 /**
  * Turns Codex rollout lines into messages and turn marks. `turn_context` (model, effort) is joined to its turn by `turn_id`:
- * codex writes it after `task_started`. `response_item` (the raw model conversation), `session_meta`, token and state lines are
- * skipped, and so is any line that is not an object of the expected shape.
+ * codex writes it after `task_started`. `response_item` (the raw model conversation, which duplicates the `item_completed` items)
+ * is skipped except the operator's updated instructions; `session_meta`, token and state lines are skipped, and so is any line
+ * that is not an object of the expected shape.
  */
 export function codexMessages(entries: TranscriptEntry[]): Shown[] {
   const contexts = new Map<string, { model?: string | undefined; effort?: string | undefined }>()
@@ -84,10 +144,15 @@ export function codexMessages(entries: TranscriptEntry[]): Shown[] {
   entries.forEach((entry, index) => {
     // A rollout line is parsed JSON: `null` or a scalar is possible, and is skipped like any other malformed line.
     const payload = record(record(entry)?.payload)
-    if (entry?.type !== 'event_msg' || !payload) return
+    if ((entry?.type !== 'event_msg' && entry?.type !== 'response_item') || !payload) return
     // The index keeps keys unique if a resumed rollout ever repeats an ordinal.
     const key = `${typeof entry.ordinal === 'number' ? entry.ordinal : ''}:${index}`
     const at = str(entry.timestamp)
+    if (entry.type === 'response_item') {
+      const note = instructionsNote(payload, key, at)
+      if (note) out.push({ kind: 'message', ...note })
+      return
+    }
     const id = str(payload.turn_id)
     if (payload.type === 'task_started') {
       turns += 1
@@ -112,9 +177,14 @@ function PartView({ part }: { part: Part }) {
   if (part.kind === 'text') return part.tone === 'commentary'
     ? <div className="commentary"><span className="commentary-label">Progress</span><p className="plain">{part.text}</p></div>
     : <p className="plain">{part.text}</p>
-  const summary = part.kind === 'tool' ? `Tool call: ${part.name}` : part.kind === 'result' ? part.error ? 'Tool result (error)'
-    : 'Tool result' : 'Thinking'
-  const error = part.kind === 'result' && part.error ? ' fold-error' : ''
+  if (part.kind === 'note') return <div className="note"><p className="plain">{part.text}</p>
+    <details className="fold fold-note"><summary>New instructions</summary><pre>{part.detail}</pre></details></div>
+  const summary = part.kind === 'tool' ? `Tool call: ${part.name}` : part.kind === 'result' ? part.error ? 'Tool result (error)' : 'Tool result'
+    : part.kind === 'command' ? `Command: ${part.command}${part.exitCode ? ` (exit ${part.exitCode})` : ''}`
+    : part.kind === 'files' ? `Files: ${part.files.map(file => `${CHANGE_LABELS[file.change] ?? 'Changed'} ${file.path}`).join(', ') || 'no changes'}`
+      + (part.error ? ' (failed)' : '')
+    : 'Thinking'
+  const error = (part.kind === 'result' || part.kind === 'files') && part.error || part.kind === 'command' && !!part.exitCode ? ' fold-error' : ''
   return <details className={`fold fold-${part.kind}${error}`}><summary>{summary}</summary><pre>{part.detail}</pre></details>
 }
 

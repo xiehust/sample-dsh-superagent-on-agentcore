@@ -13,6 +13,7 @@ import { applyTheme } from '../../src/theme.ts'
 import type { TranscriptEntry } from '../../src/types.ts'
 import { API, catalog, createFakeApi, ID_TOKEN, ignored, text, thread, ticket } from '../fake-api-core.ts'
 import { CODEX_EXTRA } from '../fixtures/codex-extra.ts'
+import L1 from '../fixtures/codex-l1-lines.json'
 import probe from '../fixtures/codex-probe-rollout.jsonl?raw'
 import '@fontsource-variable/atkinson-hyperlegible-next'
 import '@fontsource/atkinson-hyperlegible-mono/latin-400.css'
@@ -29,7 +30,8 @@ if (params.get('platform') === '1') api.me.platformAdmin = true
 if (params.get('codex') === '1') api.models = catalog({ claude: true, codex: true })
 if (params.get('retired') === '1') api.settings.eval.value = { ...api.settings.eval.value, model: { provider: 'bedrock', model: 'global.example.retired-model' } }
 if (params.get('transcript') === 'codex') {
-  api.transcript = [...probe.split('\n').filter(Boolean).map(line => JSON.parse(line) as TranscriptEntry), ...CODEX_EXTRA]
+  api.transcript = [...probe.split('\n').filter(Boolean).map(line => JSON.parse(line) as TranscriptEntry), ...CODEX_EXTRA,
+    ...L1 as TranscriptEntry[]]
   api.transcriptAgent = 'codex'
 }
 api.tickets.push(

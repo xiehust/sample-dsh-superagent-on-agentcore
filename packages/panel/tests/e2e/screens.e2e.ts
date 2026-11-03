@@ -77,6 +77,8 @@ for (const theme of THEMES) {
       await page.getByRole('button', { name: 'Show transcript' }).click()
       await expect(page.getByRole('separator', { name: 'Turn 1', exact: true })).toBeVisible()
       await page.getByText('Tool call: get_weather').click()
+      await page.getByText('Command: ls -a').click()
+      await page.getByText('Files: Added NOTES.md').click()
       await page.getByRole('heading', { name: 'Transcript' }).locator('xpath=ancestor::section')
         .screenshot({ path: `tests/e2e/screenshots/transcript-codex-${theme}.png` })
     })
