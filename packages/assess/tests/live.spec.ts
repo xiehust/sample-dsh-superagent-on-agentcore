@@ -12,6 +12,8 @@ import { BedrockModelClient, callTool, modelFor, type Usage } from '../src/index
 const live = process.env.DSHSA_LIVE === '1'
 /** `DSHSA_LIVE_MODEL` runs it against another model, such as Models.worker. */
 const modelId = process.env.DSHSA_LIVE_MODEL || modelFor('eval')
+/** `DSHSA_LIVE_EFFORT` sends a reasoning effort in the model family's field (v7). */
+const effort = process.env.DSHSA_LIVE_EFFORT ? { effort: process.env.DSHSA_LIVE_EFFORT } : {}
 describe.skipIf(!live)('Bedrock (live)', () => {
   it('answers with the offered tool (auto tool_choice) under the cache point within the Eval deadline', async () => {
     const usage: Usage[] = []
@@ -23,10 +25,11 @@ describe.skipIf(!live)('Bedrock (live)', () => {
       policy: '## Policy\nAllowed GitHub accounts: alice. Accept mode: observe.',
     }
     const card = (from: string, text: string) => JSON.stringify({ eval_id: 'live-1', strength: 'explicit', triggers: [{ from, text }] })
-    const accepted = await callTool(model, { model: modelId, system, prompt: card('alice', '@agent please fix the typo in README.md'),
+    const accepted = await callTool(model, { model: modelId, ...effort, system, prompt: card('alice', '@agent please fix the typo in README.md'),
       tool: { name: 'route', description: 'Record the routing decision.', schema: Decision }, maxTokens: 512, deadlineMs: 60_000 })
-    const ignored = await callTool(model, { model: modelId, system, prompt: card('mallory', 'nice weather today'),
+    const ignored = await callTool(model, { model: modelId, ...effort, system, prompt: card('mallory', 'nice weather today'),
       tool: { name: 'route', description: 'Record the routing decision.', schema: Decision }, maxTokens: 512, deadlineMs: 60_000 })
+    console.log('live decisions', JSON.stringify({ accepted, ignored }))
     expect(accepted.kind).toBe('accept')
     expect(ignored.kind).toBe('ignore')
     expect(usage.every(item => (item.inputTokens ?? 0) > 0)).toBe(true)

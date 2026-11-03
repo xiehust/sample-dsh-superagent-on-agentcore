@@ -48,6 +48,17 @@ export { SCHEMA_VERSION }
  * The Runtime opens it after locking the state directory and automatically migrates supported older schemas on startup.
  * The Engine mutates domain aggregates inside `atomic` transactions while Sources, views, and the Outbox read state or update their own records.
  */
+/**
+ * dshsa v7 rollback safety: the settings schemas are strict, so a pre-v7 host fails to parse any key it does not know. Keys added
+ * in v7 are therefore stored only when they differ from their default; the read path (`SettingsSchema.parse`) fills them back in.
+ */
+export function withoutV7Defaults(settings: Settings): Settings {
+  const { replyModel, ...evalRest } = settings.eval
+  const { workerType, ...executorRest } = settings.executor
+  return { ...settings, eval: (replyModel === null ? evalRest : settings.eval) as Settings['eval'],
+    executor: (workerType === 'claude' ? executorRest : settings.executor) as Settings['executor'] }
+}
+
 export class Store implements Repositories {
   readonly db: DatabaseSync
   /**
@@ -189,14 +200,21 @@ export class Store implements Repositories {
   /** Saves settings as the next revision (making it current) and increments `record.block`'s revision counter when present. */
   saveSettings(value: unknown, record: Omit<SettingsVersion, 'revision' | 'savedAt' | 'settings'> = { source: 'internal', policyVersion: '', policyChanged: false, notified: [] }): Settings {
     const settings = SettingsSchema.parse(value)
+    const persisted = withoutV7Defaults(settings)
     return this.atomic(() => {
-      this.settingsVersions.save(revision => ({ ...record, revision, savedAt: new Date().toISOString(), settings }))
+      this.settingsVersions.save(revision => ({ ...record, revision, savedAt: new Date().toISOString(), settings: persisted }))
       if (record.block) this.set(KV.settings.block(record.block), this.blockRevision(record.block) + 1)
       return settings
     })
   }
   /** Saved settings revisions, newest first; revisions predating settings history are absent. */
-  settingsHistory(limit = 20): SettingsVersion[] { return this.settingsVersions.list(limit) }
+  settingsHistory(limit = 20): SettingsVersion[] {
+    // Stored snapshots omit v7 keys at their default (withoutV7Defaults): fill them back in; a revision the current schema rejects stays raw.
+    return this.settingsVersions.list(limit).map(version => {
+      const parsed = SettingsSchema.safeParse(version.settings)
+      return parsed.success ? { ...version, settings: parsed.data } : version
+    })
+  }
 
   readonly triggers = {
     get: (id: string): Trigger | undefined => { const row = this.db.prepare('SELECT value FROM trigger WHERE id=?').get(id); return row ? JSON.parse(String(row.value)) as Trigger : undefined },

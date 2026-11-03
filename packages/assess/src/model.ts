@@ -2,14 +2,17 @@
  * One stateless model call with a forced tool (Bedrock Converse), used by the cell's Assessor and Replier (parent PRD R5,
  * decision D3). Moved from `packages/cell/src/model/bedrock.ts` (5c) with the same names. On top of that version:
  * - the system prompt is two blocks, `prefix` then a cache point then `policy`: a Policy save leaves the cached prompt valid;
- * - no forced tool_choice (the Claude 5.5 models refuse `tool`/`any`): the user turn asks for exactly one call, and a prose
- *   answer gets one corrective turn before `AssessUnavailable`;
+ * - per model (contracts v7 catalog, `surfaces.converse`): a forced `toolChoice` only where the model accepts one (`forceTool`;
+ *   Claude Sonnet/Opus 5.5 refuse `tool`/`any`), the cache point only where it is accepted (`promptCache`; GPT-6 Luna refuses it
+ *   and caches implicitly), and the reasoning effort in the family's field (`output_config.effort` / `reasoning.effort`). The user
+ *   turn always asks for exactly one call, and a prose answer gets one corrective turn before `AssessUnavailable`;
  * - Bedrock throttling and transient errors are retried with full-jitter backoff, but never past the call's deadline;
  * - a deadline (the Eval's `settings.eval.timeoutSeconds`) or exhausted retries raise `AssessUnavailable`, which the
  *   Assessor records as an `unavailable` Eval; a caller's own abort (lease lost, eval released) stays an AbortError.
  */
 import { BedrockRuntimeClient, ConverseCommand, type ConverseCommandOutput, type Message, type SystemContentBlock } from '@aws-sdk/client-bedrock-runtime'
 import { z } from 'zod'
+import { catalogModel, type CatalogModel, type SurfaceSpec } from '@dshsa/contracts'
 
 export interface SystemPrompt {
   /** Everything before the Policy section: the DSH orchestrator prompt and the stateless preamble. Cached. */
@@ -23,6 +26,8 @@ export interface ToolCall<S extends z.ZodType> {
   /** The user turn: the candidate or report card, as text. */
   prompt: string
   tool: { name: string; description: string; schema: S }
+  /** v7: reasoning effort, sent in the model family's field; ignored for a model outside the catalog or an effort it does not list. */
+  effort?: string
   maxTokens?: number
   /** The caller's own cancellation (lease lost, eval released); aborting it rejects with its reason, not `AssessUnavailable`. */
   signal?: AbortSignal
@@ -49,7 +54,7 @@ export function transient(error: unknown): boolean {
 export interface RetryPolicy { attempts: number; baseMs: number; maxMs: number }
 export const DEFAULT_RETRY: RetryPolicy = { attempts: 5, baseMs: 500, maxMs: 8000 }
 /** Token usage and latency of one Converse call, for metrics. */
-export interface Usage { model: string; tool: string; inputTokens?: number; outputTokens?: number; cacheReadTokens?: number;
+export interface Usage { model: string; tool: string; effort?: string; inputTokens?: number; outputTokens?: number; cacheReadTokens?: number;
   cacheWriteTokens?: number; latencyMs?: number; attempts: number }
 export interface BedrockModelOptions {
   retry?: RetryPolicy
@@ -67,9 +72,20 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
     signal.addEventListener('abort', done, { once: true })
   })
 }
-/** Converse system blocks: the prefix, a cache point, then the Policy (absent when there is none). */
-export function systemBlocks(system: SystemPrompt): SystemContentBlock[] {
-  return [{ text: system.prefix }, { cachePoint: { type: 'default' } }, ...system.policy ? [{ text: system.policy }] : []]
+/** Converse system blocks: the prefix, a cache point (unless the model refuses one), then the Policy (absent when there is none). */
+export function systemBlocks(system: SystemPrompt, cache = true): SystemContentBlock[] {
+  return [{ text: system.prefix }, ...cache ? [{ cachePoint: { type: 'default' } } as SystemContentBlock] : [], ...system.policy ? [{ text: system.policy }] : []]
+}
+/** How one model is called on Converse (contracts v7 catalog); a model outside the catalog gets the pre-v7 request unchanged. */
+export interface ConverseShape { cache: boolean; forceTool: boolean; effort?: string; fields?: Record<string, unknown> }
+export function converseShape(model: string, effort?: string): ConverseShape {
+  const entry: CatalogModel | undefined = catalogModel(model)
+  const spec: SurfaceSpec | undefined = entry?.surfaces.converse
+  if (!entry || !spec) return { cache: true, forceTool: false }
+  const chosen = effort !== undefined && (spec.efforts as readonly string[]).includes(effort) ? effort : undefined
+  const fields = chosen === undefined ? undefined
+    : entry.family === 'openai' ? { reasoning: { effort: chosen } } : { output_config: { effort: chosen } }
+  return { cache: spec.promptCache !== false, forceTool: spec.forceTool === true, ...chosen ? { effort: chosen } : {}, ...fields ? { fields } : {} }
 }
 
 export class BedrockModelClient implements ModelClient {
@@ -82,12 +98,14 @@ export class BedrockModelClient implements ModelClient {
     private readonly options: BedrockModelOptions = {}) {
     this.retry = options.retry ?? DEFAULT_RETRY
   }
-  async call<S extends z.ZodType>({ model, system, prompt, tool, maxTokens = 4096, signal, deadlineMs }: ToolCall<S>): Promise<unknown> {
+  async call<S extends z.ZodType>({ model, system, prompt, tool, effort, maxTokens = 4096, signal, deadlineMs }: ToolCall<S>): Promise<unknown> {
     const json = z.toJSONSchema(tool.schema, { target: 'draft-7', unrepresentable: 'any' }) as Record<string, unknown>
-    // The Claude 5.5 models refuse a forced tool_choice (`tool` / `any`): the tool is offered with the default (auto) choice,
-    // and the user turn says the answer must be that one call. The instruction sits in the user turn so the cached system prefix
-    // stays the same for every tool.
-    const toolConfig = { tools: [{ toolSpec: { name: tool.name, description: tool.description, inputSchema: { json: json as never } } }] }
+    const shape = converseShape(model, effort)
+    // Claude Sonnet/Opus 5.5 refuse a forced tool_choice (`tool` / `any`): for them the tool is offered with the default (auto)
+    // choice, and for every model the user turn says the answer must be that one call. The instruction sits in the user turn so
+    // the cached system prefix stays the same for every tool.
+    const toolConfig = { tools: [{ toolSpec: { name: tool.name, description: tool.description, inputSchema: { json: json as never } } }],
+      ...shape.forceTool ? { toolChoice: { tool: { name: tool.name } } } : {} }
     const deadline = deadlineMs === undefined ? undefined : AbortSignal.timeout(deadlineMs)
     const abort = AbortSignal.any([...signal ? [signal] : [], ...deadline ? [deadline] : []])
     const expired = () => !!deadline?.aborted && !signal?.aborted
@@ -96,7 +114,8 @@ export class BedrockModelClient implements ModelClient {
     const random = this.options.random ?? Math.random
     let attempts = 0
     const converse = async (messages: Message[]): Promise<ConverseCommandOutput> => {
-      const command = new ConverseCommand({ modelId: model, system: systemBlocks(system), messages, inferenceConfig: { maxTokens }, toolConfig })
+      const command = new ConverseCommand({ modelId: model, system: systemBlocks(system, shape.cache), messages, inferenceConfig: { maxTokens }, toolConfig,
+        ...shape.fields ? { additionalModelRequestFields: shape.fields as never } : {} })
       for (let attempt = 1; ; attempt++) {
         attempts += 1
         try { return await this.client.send(command, { abortSignal: abort }) as ConverseCommandOutput }
@@ -114,7 +133,7 @@ export class BedrockModelClient implements ModelClient {
     }
     const report = (result: ConverseCommandOutput) => {
       const usage = result.usage as (typeof result.usage & { cacheReadInputTokens?: number; cacheWriteInputTokens?: number }) | undefined
-      this.options.onUsage?.({ model, tool: tool.name, attempts, ...usage?.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {},
+      this.options.onUsage?.({ model, tool: tool.name, attempts, ...shape.effort ? { effort: shape.effort } : {}, ...usage?.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {},
         ...usage?.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {},
         ...usage?.cacheReadInputTokens !== undefined ? { cacheReadTokens: usage.cacheReadInputTokens } : {},
         ...usage?.cacheWriteInputTokens !== undefined ? { cacheWriteTokens: usage.cacheWriteInputTokens } : {},

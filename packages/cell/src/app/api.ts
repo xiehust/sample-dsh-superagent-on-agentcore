@@ -1,7 +1,8 @@
-/* dshsa adapter of DSH src/app/api.ts: `ModelCatalog` is the cell's Bedrock model list. The routes and payloads are unchanged. */
+/* dshsa adapter of DSH src/app/api.ts: `ModelCatalog` is the cell's Bedrock model catalog (contracts v7). The routes and payloads are unchanged. */
 /** Type-only management API contract between the web panel and host routes, imported by the panel without bundling host code. */
-/** dshsa: the Bedrock model ids a cell may use per role, in place of DSH's provider model catalog. */
-export interface ModelCatalog { models: { id: string; roles: ('eval' | 'executor')[] }[] }
+/** dshsa v7: the model catalog, defaults and worker types (contracts `ModelCatalogView`), in place of DSH's provider model catalog. */
+export type ModelCatalog = ModelCatalogView
+import type { ModelCatalogView } from '@dshsa/contracts'
 import type { PromptConfig, Prompts } from './prompts.ts'
 import type { PromptsView, StateView, TicketPageView } from './http.ts'
 import type { HistoryView } from './settings-history.ts'

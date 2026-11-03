@@ -5,7 +5,7 @@ import type { ForwardRequest } from '../src/forward.ts'
 import { type Deps, type HttpEvent, MAX_BODY_BYTES, handle } from '../src/handler.ts'
 import type { ChatBinding, Repo } from '../src/repo.ts'
 import { CELL_ROUTES, matchCellRoute } from '../src/routes.ts'
-import { parseJsonl } from '../src/transcript.ts'
+import { parseJsonl, type Transcript } from '../src/transcript.ts'
 
 const NOW = Date.parse('2026-11-01T00:00:00Z')
 const tenant = (tenantId: string, status: 'active' | 'disabled' = 'active'): TenantRecord =>
@@ -34,7 +34,7 @@ class FakeRepo implements Repo {
 function setup() {
   const repo = new FakeRepo()
   const forward = vi.fn(async (_req: ForwardRequest) => ({ status: 200, body: '{"ok":1}', contentType: 'application/json' }))
-  const transcripts = { read: vi.fn(async () => ({ entries: [{ type: 'user' }], truncated: false })) }
+  const transcripts = { read: vi.fn(async (): Promise<Transcript | undefined> => ({ entries: [{ type: 'user' }], truncated: false })) }
   const deps: Deps = { repo, forward, callerProof: async (cellId: string) => `https://sts.ap-northeast-1.amazonaws.com/?proof=${cellId}`, transcripts, now: () => NOW }
   return { repo, forward, transcripts, deps }
 }
@@ -198,6 +198,14 @@ describe('panel-api', () => {
     const res = await handle(ev('GET', '/v1/cells/acme--gh1/tickets/T-1/transcript', user(['dshsa-tenant-acme'])), deps)
     expect(res.statusCode).toBe(200)
     expect(transcripts.read).toHaveBeenCalledWith('acme', 'acme--gh1', 'T-1')
+  })
+
+  it('passes the transcript\'s agent through (v7 Codex rollouts)', async () => {
+    const { deps, transcripts } = setup()
+    transcripts.read.mockResolvedValueOnce({ entries: [{ type: 'event_msg' }], truncated: false, updatedAt: '2026-11-03T11:14:00.000Z', agent: 'codex' })
+    const res = await handle(ev('GET', '/v1/cells/acme--gh1/tickets/T-1/transcript', user(['dshsa-tenant-acme'])), deps)
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body as string)).toEqual({ entries: [{ type: 'event_msg' }], truncated: false, updatedAt: '2026-11-03T11:14:00.000Z', agent: 'codex' })
   })
 
   it('manages chat bindings only within the tenant', async () => {

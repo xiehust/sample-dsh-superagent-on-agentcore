@@ -3,10 +3,11 @@
  * the Engine's `start`/`deliver`/`stop` only enqueue durable effects (`launch`, `delivery`, `stop`); their handlers provision
  * the ticket's access point, mint a ticket token and invoke the ticket's runtime session, then report back to the Engine.
  */
-import { InvocationRequest, InvocationResponse, Models, accessPointRoot, runtimeSessionId, ticketKey, type WorkerConfig, type WorkerInput,
+import { InvocationRequest, InvocationResponse, WORKER_TYPE_LABELS, accessPointRoot, resolveModel, type WorkerType, runtimeSessionId, ticketKey, type WorkerConfig, type WorkerInput,
   type WorkerTicket } from '@dshsa/contracts'
 import { latestAssignment, liveTicket, runningAssignment, type Assignment, type Executor, type Ticket, type TicketInput } from '../core/index.ts'
 import { Later } from '../app/effects.ts'
+import { KV } from '../kv.ts'
 import { ticketEnvironment } from '../app/execution-environment.ts'
 import type { CellParts } from '../cell.ts'
 import type { TicketTokens } from '../token.ts'
@@ -30,11 +31,16 @@ export interface Provisioner { ensure(request: { tenantId: string; cellId: strin
 
 /** What the Executor needs beyond the cell's parts (which hold a lazy `engine`, so they are never spread). */
 export interface AgentCoreExecutorDeps {
-  runtime: WorkerRuntime
+  /** The Claude worker runtime (pre-v7 name; same as `runtimes.claude`). */
+  runtime?: WorkerRuntime
+  /** v7: one runtime per worker type this host can invoke; a ticket whose type has none fails permanently. */
+  runtimes?: Partial<Record<WorkerType, WorkerRuntime>>
   provisioner: Provisioner
   tokens: TicketTokens
   /** The worker version the runtime serves now (contracts `WorkerVersion`), or undefined when unknown; enables stale-session stops. */
   workerVersion?: () => Promise<string | undefined>
+  /** v7: the served version per worker type (`workerVersion` is the claude one). */
+  workerVersions?: Partial<Record<WorkerType, () => Promise<string | undefined>>>
   /** Pause after a stale session's stop before the next invoke, so the old microVM's SIGTERM checkpoint can land (default 2 s). */
   staleStopSettleMs?: number
 }
@@ -47,12 +53,41 @@ const ASSIGNMENT_CHARS = 1500
 /** True when the assignment's last turn ended after its last delivery, so its worker is not in a turn. */
 const idleSince = (assignment: Assignment): boolean => !!assignment.idleAt && (!assignment.deliveredAt || assignment.idleAt >= assignment.deliveredAt)
 class WorkerRefused extends Error { constructor(readonly code: string, message: string) { super(`${code}: ${message}`) } }
+/** v7: the ticket's worker type has no runtime in this installation (never retried). */
+class NoRuntime extends Error {
+  readonly code = 'bad_request'
+  constructor(readonly type: WorkerType) { super(`The ${WORKER_TYPE_LABELS[type]} worker is not deployed in this installation`) }
+}
 
 export class AgentCoreExecutor implements Executor {
   private readonly attempts = new Map<string, number>()
   /** By runtime session id, what it last answered (in memory: after a restart, an idle session is probed once with `status`). */
   private readonly seen = new Map<string, SessionSeen>()
   constructor(private readonly host: CellParts, private readonly deps: AgentCoreExecutorDeps) {}
+  /**
+   * v7: the ticket's worker type. Fixed (written if absent) before the first invoke of its first launch from
+   * `settings.executor.workerType`; a ticket that already started before v7 is a Claude ticket. Never rewritten.
+   */
+  workerType(ticket: Ticket, fix = false): WorkerType {
+    const { store } = this.host
+    const stored = store.get(KV.workerType(ticket.id))
+    if (stored) return stored
+    const legacy = ticket.assignments.some(item => item.startedAt)
+    const type: WorkerType = legacy ? 'claude' : store.settings().executor.workerType
+    if (fix || legacy) store.set(KV.workerType(ticket.id), type)
+    return type
+  }
+  private runtimeOf(type: WorkerType): WorkerRuntime | undefined {
+    return this.deps.runtimes?.[type] ?? (type === 'claude' ? this.deps.runtime : undefined)
+  }
+  private runtime(type: WorkerType): WorkerRuntime {
+    const runtime = this.runtimeOf(type)
+    if (!runtime) throw new NoRuntime(type)
+    return runtime
+  }
+  private served(type: WorkerType): (() => Promise<string | undefined>) | undefined {
+    return this.deps.workerVersions?.[type] ?? (type === 'claude' ? this.deps.workerVersion : undefined)
+  }
   install(): void {
     const { effects, settings } = { effects: this.host.effects, settings: () => this.host.store.settings() }
     const running = () => this.host.store.tickets.open().filter(ticket => runningAssignment(ticket)).length
@@ -76,7 +111,7 @@ export class AgentCoreExecutor implements Executor {
         mandate: ticket.mandate as unknown as Record<string, unknown>, ...note ? { note } : {} } }
   }
   /** The `config` block: model, composed worker system prompt, skills, execution variables and repository (sent on start and deliver). */
-  config(ticket: Ticket): WorkerConfig {
+  config(ticket: Ticket, type: WorkerType = this.workerType(ticket)): WorkerConfig {
     const { store, prompts, sources, cell } = this.host
     const settings = store.settings()
     const version = prompts.current()
@@ -84,7 +119,10 @@ export class AgentCoreExecutor implements Executor {
     const variables = ticketEnvironment({ cell, sources, settings, ticket, ...trigger ? { trigger } : {} })
     const mandate = mandateInstructions(ticket.mandate)
     const systemPrompt = `[dsh-superagent prompt revision ${version.revision}]\n${prompts.compose(version.config, 'worker', variables)}\n${mandate}`
-    return { model: settings.executor.model?.model ?? Models.worker, systemPrompt,
+    const { model, effort, source } = resolveModel('worker', settings, type)
+    // The cell's worker model is for another worker type (or a hand-edited id): this ticket runs on its type's default.
+    if (source === 'fallback') this.host.log.info('model_fallback', { ticketId: ticket.id, workerType: type, stored: settings.executor.model?.model, model })
+    return { model, ...effort ? { effort } : {}, agent: type, systemPrompt,
       skills: prompts.skills(version.config).map(([name, content]) => ({ name: `dsh-superagent-${name}`, content })),
       env: Object.fromEntries(variables.map(variable => [variable.key, variable.value])),
       repo: { fullName: cell.repository, defaultBranch: cell.defaultBranch, cloneUrl: `https://github.com/${cell.repository}.git` } }
@@ -113,10 +151,12 @@ export class AgentCoreExecutor implements Executor {
   async request(action: InvocationRequest['action'], ticket: Ticket, assignment: Assignment, inputs: WorkerInput[]): Promise<InvocationResponse> {
     const { ticket: block, sessionId, key } = this.identity(ticket, assignment)
     const token = await this.deps.tokens.sign({ sub: key, tid: block.tenantId, cid: block.cellId, tkt: ticket.id, asg: assignment.id, rsid: sessionId })
+    const type = this.workerType(ticket)
+    const runtime = this.runtime(type)
     const request = InvocationRequest.parse({ v: 1, action, token, ticket: block, inputs,
-      ...action === 'start' || action === 'deliver' ? { config: this.config(ticket) } : {} })
+      ...action === 'start' || action === 'deliver' ? { config: this.config(ticket, type) } : {} })
     if (!this.host.holding()) throw new Later('The cell lease is not held')
-    const response = InvocationResponse.parse(await this.deps.runtime.invoke(sessionId, request, this.host.lifetime))
+    const response = InvocationResponse.parse(await runtime.invoke(sessionId, request, this.host.lifetime))
     this.seen.set(sessionId, { version: response.workerVersion ?? null })
     return response
   }
@@ -127,9 +167,12 @@ export class AgentCoreExecutor implements Executor {
    * Best effort: an unknown current version, or a stop that fails, never blocks the invocation.
    */
   async refreshStale(ticket: Ticket, assignment: Assignment, idle: boolean, probe: boolean): Promise<void> {
-    const stop = this.deps.runtime.stopSession?.bind(this.deps.runtime)
-    if (!idle || !stop || !this.deps.workerVersion) return
-    const expected = await this.deps.workerVersion().catch(() => undefined)
+    const type = this.workerType(ticket)
+    const runtime = this.runtime(type)
+    const stop = runtime.stopSession?.bind(runtime)
+    const served = this.served(type)
+    if (!idle || !stop || !served) return
+    const expected = await served().catch(() => undefined)
     if (!expected) return
     const { sessionId } = this.identity(ticket, assignment)
     if (!this.seen.has(sessionId) && probe) {
@@ -162,6 +205,7 @@ export class AgentCoreExecutor implements Executor {
     if (this.host.paused()) throw new Later('Processing is paused')
     const { ticket, assignment } = found
     try {
+      this.runtime(this.workerType(ticket, true))  // fix the type before the first invoke; no runtime → permanent failure below
       const { sessionId, key, rootPath } = this.identity(ticket, assignment)
       await this.deps.provisioner.ensure({ tenantId: this.host.cell.tenantId, cellId: this.host.cell.cellId, ticketId, ticketKey: key, runtimeSessionId: sessionId, rootPath })
       // A resumed ticket reuses its session: its earlier assignment has ended, so the session is idle (never probed: it may be long gone).
@@ -173,11 +217,13 @@ export class AgentCoreExecutor implements Executor {
       this.attempts.delete(`launch:${assignmentId}`)
     } catch (error) {
       if (error instanceof Later) throw error
-      const permanent = (error instanceof WorkerRefused && PERMANENT.has(error.code)) || (error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'bad_request')
+      const permanent = error instanceof NoRuntime || (error instanceof WorkerRefused && PERMANENT.has(error.code))
+        || (error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 'bad_request')
       if (!permanent && this.retries(`launch:${assignmentId}`, error)) throw error
       if (!this.current(ticketId, assignmentId)) return
       this.host.log.error('launch failed', { ticketId, assignmentId, error: String(error) })
-      this.host.engine.report(ticketId, { state: 'failed', summary: `The worker could not start: ${String(error).slice(0, 500)}` })
+      const summary = error instanceof NoRuntime ? error.message : `The worker could not start: ${String(error).slice(0, 500)}`
+      this.host.engine.report(ticketId, { state: 'failed', summary })
     }
   }
   /** Delivers the ticket's undelivered Inputs to its running assignment in one `deliver` invocation. */
@@ -200,7 +246,12 @@ export class AgentCoreExecutor implements Executor {
     } catch (error) {
       if (error instanceof Later) throw error
       const current = this.host.store.tickets.get(ticketId)
-      if (current && liveTicket(current) && runningAssignment(current)?.id === assignment.id) this.host.engine.deliveryFailed(ticketId, assignment.id, String(error))
+      const live = current && liveTicket(current) && runningAssignment(current)?.id === assignment.id
+      if (live) this.host.engine.deliveryFailed(ticketId, assignment.id, String(error))
+      if (error instanceof NoRuntime) {  // permanent: report once, never retry
+        if (live) this.host.engine.report(ticketId, { state: 'failed', summary: error.message })
+        return
+      }
       throw error
     }
   }
@@ -208,6 +259,7 @@ export class AgentCoreExecutor implements Executor {
     const ticket = this.host.store.tickets.get(ticketId)
     const assignment = ticket?.assignments.find(item => item.id === assignmentId)
     if (!ticket || !assignment || !assignment.startedAt) return
+    if (!this.runtimeOf(this.workerType(ticket))) return  // no runtime for its type: nothing runs there to stop
     const response = await this.request('stop', ticket, assignment, [])
     if (!response.ok && !PERMANENT.has(response.error)) throw new WorkerRefused(response.error, response.message)
   }

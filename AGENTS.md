@@ -7,8 +7,8 @@ Guidance for AI coding agents (Claude Code, Codex, Kiro, …) working in this re
 
 A multi-tenant "super agent" platform on AWS, ported from DeepSeek's dsh-superagent (MIT). GitHub and Feishu/Lark
 messages become Triggers; the DSH domain (Trigger → Thread/Eval → Decision → Ticket → Assignment → Report) runs in a
-per-(tenant, repo) **cell** on the ECS host; work runs in **AgentCore Runtime** microVMs with a Claude Agent SDK
-worker and a per-ticket **S3 Files access point**. Read [docs/design.md](docs/design.md) (§4 contracts, §5 security)
+per-(tenant, repo) **cell** on the ECS host; work runs in **AgentCore Runtime** microVMs with a
+worker (Claude Agent SDK, or OpenAI Codex app-server per cell since v7) and a per-ticket **S3 Files access point**. Read [docs/design.md](docs/design.md) (§4 contracts, §5 security)
 before changing anything that crosses a package boundary; panel onboarding is in
 [docs/onboarding-design.md](docs/onboarding-design.md).
 
@@ -77,6 +77,10 @@ call AWS unless the user asked for it.
   released 10 s after the agent's `/status` first reports `cliStarted`, or 120 s after the first mount. Never replace a listed file
   after the build (e.g. `sed -i` at run time). Check the effect against the previous image with a fresh session's first `mounted`
   line (`mount_ms`) and first `cli_started` line (`first: true`, `ms`), and read the `pinned` and `pin_released` lines.
+  The Codex image (Dockerfile target `codex`) pins `rg` then the ~391 MB codex binary instead; on a fresh Codex session also check
+  the `codex_skills` line (only the cell's and the repo's skills) and `cli_started` with `first: true` (agent=codex).
+- Models, efforts and worker types come only from the v7 catalog (`packages/contracts/src/models.ts`, Python mirror, vectors);
+  never hardcode a model id elsewhere. Codex's own skill roots, ChatGPT login and telemetry stay disabled (`codex-config.toml`).
 - Never trust a GitHub `installation_id` from a redirect; verify with the user token (`GET /user/installations`).
 - Policy rejections are logged as `trigger not admitted` with a reason in `/dshsa/host`, and every other ignore (the
   Assessor's `said`, `noRuleMatched`, `directionUnsettled`, `observed`, …) as `decision ignored` with its codes; check

@@ -4,6 +4,7 @@
  */
 import { LIMITS } from './limits.ts'
 import { z } from 'zod'
+import { WorkerType } from '@dshsa/contracts'
 import { ADMISSION_DEFAULTS, type Admission, type AdmissionCell, type AdmissionRow } from './admission.ts'
 import { key, type AssessmentOutcome, type Mandate, type Policy, type PolicyEffect, type SourceScope, type Strength, type Thread, type Ticket,
   type Trigger, type ActorRef, type GateResult } from './core/index.ts'
@@ -89,11 +90,15 @@ export const EvalConfigSchema = z.object({
    * direction, reply once in its conversation with how to ask again. Not part of the Policy version.
    */
   replyOnIgnore: z.boolean().default(true),
+  /** dshsa v7: the Replier's model; null → the Assessor's `model` (then the default). Not part of the Policy version. */
+  replyModel: RoleModelSchema.nullable().default(null),
 }).strict()
 const CommandNameSchema = z.string().regex(/^[A-Za-z0-9._-]+$/).refine(name => name !== '.' && name !== '..', 'Not a command name')
   .refine(name => !WORKER_COMMANDS.includes(name), `${WORKER_COMMANDS.join(', ')} cannot be blocked`)
 /** Executor settings: worker model, concurrency, ticket directory root (empty defaults to `<stateDir>/work`), `prepare` command, and blocked commands. */
 export const ExecutorConfigSchema = z.object({
+  /** dshsa v7: the worker agent new tickets run on (contracts `WorkerType`); `model` is interpreted for this type. */
+  workerType: WorkerType.default('claude'),
   model: RoleModelSchema.nullable().default(null),
   maxWorkers: z.number().int().min(LIMITS.maxWorkers.min).max(LIMITS.maxWorkers.max).default(3),
   directory: z.string().trim().refine(path => path === '' || path.startsWith('/'), 'An absolute path, or empty for <stateDir>/work').default(''),

@@ -5,6 +5,8 @@ import {
   AuditEntry, CellEnvelope, CognitoGroups, InstallationClaim, InvocationRequest, InvocationResponse, PanelRoleHeader, RESERVED_TENANT_IDS,
   RouteRecord, Secrets, SetupState, Tables, TenantRecord, TicketTokenClaims, WorkerEvent, WorkerVersion, onboardingKey, leaseKey, HOST_LEASE_PREFIX, LeaseRecord, GithubOauthSecret,
   accessPointRoot, cellId, decodeUnverified, derToJose, envelopeId, runtimeSessionId, signingInput, tenantOfCell, ticketKey,
+  DEFAULT_MODELS, MODEL_CATALOG, WORKER_TYPES, WorkerConfig, checkModel, resolveModel, surfaceOf,
+  type ModelRole, type ModelSettings, type ModelSurface, type WorkerType,
 } from '../src/index.ts'
 
 describe('ids', () => {
@@ -152,5 +154,48 @@ describe('v6 panel onboarding', () => {
     expect(Secrets.githubOauth).toBe('dshsa/github-oauth')
     expect(GithubOauthSecret.parse({ clientId: 'Iv1.x', clientSecret: 's', appId: '5564096', slug: 'dshsa-agent' })).toMatchObject({ appId: '5564096', slug: 'dshsa-agent' })
     expect(GithubOauthSecret.safeParse({ clientId: 'Iv1.x', clientSecret: 's', slug: 'Iv23liRR37pV3z4Ie6Ba' }).success).toBe(false)
+  })
+})
+
+describe('v7 model catalog (vectors.models)', () => {
+  const m = vectors.models
+  it('catalog, defaults and SSM names match the vectors', () => {
+    expect(JSON.parse(JSON.stringify(MODEL_CATALOG))).toEqual(m.catalog)
+    expect(DEFAULT_MODELS).toEqual(m.defaults)
+    expect(WorkerVersion.parameters).toEqual(m.workerVersionParameters)
+    expect(WorkerVersion.parameter).toBe(WorkerVersion.parameters.claude)
+  })
+  it('checkModel', () => {
+    for (const c of m.checkModel) expect(checkModel(c.surface as ModelSurface, c.id, c.effort ?? undefined), JSON.stringify(c)).toBe(c.expect)
+  })
+  it('resolveModel', () => {
+    for (const c of m.resolveModel) {
+      expect(resolveModel(c.role as ModelRole, c.settings as ModelSettings, (c as { workerType?: WorkerType }).workerType), JSON.stringify(c)).toEqual(c.expect)
+    }
+  })
+  it('a worker model is only used for the worker type it was chosen for', () => {
+    const legacy = { executor: { model: { model: 'us.anthropic.claude-legacy-v1' }, workerType: 'claude' as const } }
+    expect(resolveModel('worker', legacy, 'claude')).toEqual({ model: 'us.anthropic.claude-legacy-v1', surface: 'claude-worker', source: 'stored' })
+    expect(resolveModel('worker', legacy, 'codex')).toEqual({ model: DEFAULT_MODELS.worker.codex, surface: 'codex-worker', source: 'fallback', effort: 'high' })
+    const sol = { executor: { model: { model: 'global.openai.gpt-6.1-sol', reasoningEffort: 'xhigh' }, workerType: 'codex' as const } }
+    expect(resolveModel('worker', sol, 'claude')).toEqual({ model: DEFAULT_MODELS.worker.claude, surface: 'claude-worker', source: 'fallback' })
+    // A stored effort the surface does not list is not sent (or the surface default is).
+    expect(resolveModel('eval', { eval: { model: { model: 'global.anthropic.claude-sonnet-5-5', reasoningEffort: 'none' } } }))
+      .toEqual({ model: 'global.anthropic.claude-sonnet-5-5', surface: 'converse', source: 'stored' })
+    expect(resolveModel('reply', { eval: { model: { model: 'global.openai.gpt-6-luna', reasoningEffort: 'ultra' } } }))
+      .toEqual({ model: 'global.openai.gpt-6-luna', surface: 'converse', source: 'stored', effort: 'low' })
+  })
+  it('every default is in the catalog on its surface; only the two chosen defaults carry a defaultEffort', () => {
+    expect(checkModel('converse', DEFAULT_MODELS.eval)).toBeNull()
+    expect(checkModel('converse', DEFAULT_MODELS.reply)).toBeNull()
+    for (const type of WORKER_TYPES) expect(checkModel(surfaceOf('worker', type), DEFAULT_MODELS.worker[type])).toBeNull()
+    const withDefault = MODEL_CATALOG.flatMap(model => Object.entries(model.surfaces).filter(([, spec]) => spec?.defaultEffort).map(([surface]) => `${model.id}@${surface}`))
+    expect(withDefault.sort()).toEqual(['global.openai.gpt-6-luna@converse', 'global.openai.gpt-6.1-terra@codex-worker'])
+  })
+  it('WorkerConfig accepts effort/agent and stays compatible without them', () => {
+    const base = { model: 'm', systemPrompt: '', skills: [], env: {}, repo: { fullName: 'a/b', defaultBranch: 'main', cloneUrl: 'https://github.com/a/b.git' } }
+    expect(WorkerConfig.parse(base)).toEqual(base)
+    expect(WorkerConfig.parse({ ...base, effort: 'high', agent: 'codex' }).agent).toBe('codex')
+    expect(() => WorkerConfig.parse({ ...base, agent: 'other' })).toThrow()
   })
 })

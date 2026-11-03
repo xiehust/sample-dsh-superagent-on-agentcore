@@ -4,6 +4,7 @@
  */
 /** Block-scoped settings validation, optimistic concurrency saves, processing pause control, and source policy synchronization. */
 import { z } from 'zod'
+import { checkModel, surfaceOf, type ModelSurface, type WorkerType } from '@dshsa/contracts'
 import { UserError, type EngineForSettings } from '../core/index.ts'
 import { EvalConfigSchema, ExecutorConfigSchema, PolicyConfigSchema, SettingsSchema, policyEffects, policyVersion } from '../policy.ts'
 import type { Settings as SettingsValue, SettingsBlock, SettingsOrigin, SettingsSave } from '../policy.ts'
@@ -55,6 +56,33 @@ const BLOCKS: Record<'policy' | 'eval' | 'executor' | 'source', Block> = {
   },
 }
 
+type RoleModelValue = SettingsValue['eval']['model']
+/**
+ * dshsa v7: a role model must be in the catalog for its surface (contracts `checkModel`), checked only when it changed, so a save
+ * that re-sends a whole block never fails on an untouched stored id. Switching `workerType` re-checks the worker model against
+ * the new type, and switching to a type this host has no runtime for is refused.
+ */
+function checkModels(block: SettingsBlock, current: SettingsValue, candidate: SettingsValue, available: readonly WorkerType[]): void {
+  const fail = (field: string, reason: string, error: string) => { throw new UserError('modelUnavailable', { block, field, reason, error }) }
+  const check = (field: string, surface: ModelSurface, next: RoleModelValue, previous: RoleModelValue, force = false) => {
+    if (!next || (!force && JSON.stringify(next) === JSON.stringify(previous))) return
+    const problem = checkModel(surface, next.model, next.reasoningEffort)
+    if (problem) fail(field, problem, problem === 'badEffort' ? `${next.reasoningEffort} is not an effort ${next.model} accepts here`
+      : problem === 'wrongSurface' ? `${next.model} cannot be used for ${field} (${surface})` : `${next.model} is not in the model catalog`)
+  }
+  if (block === 'eval') {
+    check('model', 'converse', candidate.eval.model, current.eval.model)
+    check('replyModel', 'converse', candidate.eval.replyModel, current.eval.replyModel)
+  }
+  if (block === 'executor') {
+    const switched = candidate.executor.workerType !== current.executor.workerType
+    if (switched && !available.includes(candidate.executor.workerType)) {
+      fail('workerType', 'workerUnavailable', `The ${candidate.executor.workerType} worker is not deployed in this installation`)
+    }
+    check('model', surfaceOf('worker', candidate.executor.workerType), candidate.executor.model, current.executor.model, switched)
+  }
+}
+
 /** Host dependencies used by `Settings`. */
 export interface SettingsHost {
   readonly store: Pick<Store, 'settings' | 'saveSettings' | 'blockRevision' | 'atomic' | 'tickets' | 'get'>
@@ -72,6 +100,8 @@ export interface SettingsHost {
   readonly setup: { configured(): boolean; checkAccounts(block: string, candidate: SettingsValue): Promise<void>; blockCommands(commands: readonly string[]): Promise<void>; restart(): void }
   /** Triggers an immediate pass so work newly allowed by a settings save runs right away. */
   requestPass(): void
+  /** dshsa v7: the worker types this host has a runtime for (default: claude only). */
+  workerTypes?(): readonly WorkerType[]
 }
 
 /**
@@ -158,12 +188,7 @@ export class Settings {
     const parsed = rules.parse(value, sources, id)
     const current = store.settings()
     const candidate = rules.merge(current, parsed, id)
-    const model = block === 'eval' ? candidate.eval.model : block === 'executor' ? candidate.executor.model : null
-    const previous = block === 'eval' ? current.eval.model : block === 'executor' ? current.executor.model : null
-    // dshsa: a role model is a Bedrock model or inference-profile id; Bedrock rejects an unknown one at the first call.
-    if (model && JSON.stringify(model) !== JSON.stringify(previous) && !/^[a-z0-9.:-]+$/i.test(model.model)) {
-      throw new UserError('modelUnavailable', { block, error: `${model.model} is not a Bedrock model id` })
-    }
+    checkModels(block, current, candidate, this.host.workerTypes?.() ?? ['claude'])
     rules.guard?.(current, candidate, origin)
     if (setupChanged(current, candidate)) await this.host.setup.checkAccounts(block, candidate)
     if (stale()) throw new SettingsConflict('Settings changed during the checks. Reload before saving.')

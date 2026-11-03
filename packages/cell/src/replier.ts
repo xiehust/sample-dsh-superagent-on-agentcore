@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { UserError, liveTicket, type Ticket } from './core/index.ts'
 import { IM_WORDS } from './infra/text.ts'
 import type { CellParts } from './cell.ts'
-import { callTool, modelFor, type ModelClient } from '@dshsa/assess'
+import { callTool, modelChoice, type ModelClient } from '@dshsa/assess'
 import { orchestratorSystem } from './assessor.ts'
 
 declare module './app/effects.ts' {
@@ -56,8 +56,8 @@ export class Replier {
     if (!ticket || ticket.assignments.at(-1)?.id !== assignmentId) return
     // The Replier needs no Policy section (it judges no candidate), so its system prompt is the cached prefix alone.
     const system = orchestratorSystem(this.host, STATELESS, false)
-    const model = modelFor('reply', store.settings())
-    const decision = await callTool(this.deps.model, { model, system, prompt: this.card(ticket), signal: this.host.lifetime,
+    const { model, effort } = modelChoice('reply', store.settings())
+    const decision = await callTool(this.deps.model, { model, ...effort ? { effort } : {}, system, prompt: this.card(ticket), signal: this.host.lifetime,
       tool: { name: 'orchestrator_reply', description: 'Send an answer, a ready result or an attention request to a person, or send=false.', schema: ReplySchema } })
     if (!decision.send || !decision.purpose || !decision.text) return
     if (!this.host.holding()) throw new Error('The cell lease is not held')

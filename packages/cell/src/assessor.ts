@@ -10,7 +10,7 @@ import { assessmentOutcome } from './policy.ts'
 import { checkedImText } from './infra/text.ts'
 import type { CellParts } from './cell.ts'
 import { AssessmentSchema, RouteItemSchema, invalid } from './decisions.ts'
-import { callTool, modelFor, type ModelClient, type SystemPrompt } from '@dshsa/assess'
+import { callTool, modelChoice, type ModelClient, type SystemPrompt } from '@dshsa/assess'
 import { environmentSection, policySection, promptParts } from './app/prompts.ts'
 import { environmentOf } from './app/execution-environment.ts'
 import { triggerMessage } from './executor/messages.ts'
@@ -78,17 +78,17 @@ export class StatelessAssessor implements Assessor {
       // The Bedrock deadline is the Eval's own timeout, so an unanswered call ends as the Eval would.
       const deadlineMs = settings.eval.timeoutSeconds * 1000
       const system = orchestratorSystem(this.host, STATELESS)
-      const model = modelFor('eval', settings)
+      const { model, effort } = modelChoice('eval', settings)
       const card = await this.card(candidate, signal)
       const live = () => engine.candidate(triggerId)?.evalId === evalId && this.host.holding()
       if (candidate.strength === 'explicit') {
-        const item = await callTool(this.deps.model, { model, system, signal, deadlineMs, prompt: card,
+        const item = await callTool(this.deps.model, { model, ...effort ? { effort } : {}, system, signal, deadlineMs, prompt: card,
           tool: { name: 'orchestrator_route', description: 'Route this explicit candidate: accept it as a new ticket, attach it to an existing ticket, stop a ticket on a person\'s stop message, or ignore it, as dispatch says.',
             schema: RouteItemSchema.superRefine((value, ctx) => { const problem = invalid(value); if (problem) ctx.addIssue({ code: 'custom', message: problem }) }) } })
         if (!live()) return
         this.route(candidate, item)
       } else {
-        const assessment = await callTool(this.deps.model, { model, system, signal, deadlineMs, prompt: card,
+        const assessment = await callTool(this.deps.model, { model, ...effort ? { effort } : {}, system, signal, deadlineMs, prompt: card,
           tool: { name: 'orchestrator_eval_decide', description: 'Record the decision of this assessment, as admission describes it.', schema: AssessmentSchema } })
         if (!live()) return
         let outcome = assessmentOutcome(assessment, settings, candidate.strength)
