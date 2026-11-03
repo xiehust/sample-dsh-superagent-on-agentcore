@@ -23,7 +23,7 @@ from typing import Any
 import boto3
 import dshsa_contracts as contracts
 
-from dshsa_worker.github_app import READ_PERMISSIONS, WRITE_PERMISSIONS, GithubApp, GithubError, read_repo
+from dshsa_worker.github_app import OPTIONAL_WRITE_PERMISSIONS, READ_PERMISSIONS, WRITE_PERMISSIONS, GithubApp, GithubError, read_repo
 from dshsa_worker.ticket_token import InvalidToken, KmsPublicKeys, TicketTokenVerifier
 
 MAX_BODY = 256 * 1024
@@ -175,7 +175,7 @@ class WorkerApi:
     def credentials(self, _claims: contracts.TicketTokenClaims, cell: dict[str, Any], _body: Any) -> dict[str, Any]:
         repo = cell["repo"]
         try:
-            return self._github().installation_token(int(repo["installationId"]), int(repo["id"]), WRITE_PERMISSIONS)
+            return self._github().installation_token(int(repo["installationId"]), int(repo["id"]), WRITE_PERMISSIONS, OPTIONAL_WRITE_PERMISSIONS)
         except GithubError as error:
             raise HttpError(error.status, "github_error", str(error)) from error
 

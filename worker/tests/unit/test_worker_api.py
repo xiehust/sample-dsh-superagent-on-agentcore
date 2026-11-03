@@ -40,8 +40,8 @@ class FakeApp:
     def __init__(self, app_id, key):
         self.app_id = app_id
 
-    def installation_token(self, installation_id, repo_id, permissions):
-        FakeApp.calls.append((installation_id, repo_id, permissions))
+    def installation_token(self, installation_id, repo_id, permissions, optional=None):
+        FakeApp.calls.append((installation_id, repo_id, permissions, optional))
         return {"token": "ghs_x", "expiresAt": "2026-11-01T01:00:00Z"}
 
 
@@ -157,6 +157,7 @@ def test_github_credentials_are_scoped_to_the_cell_repo(keys):
     status, body = call(api, "/v1/credentials/github", {"repo": "someone/else"}, keys.token())
     assert status == 200 and body["token"] == "ghs_x"
     assert FakeApp.calls[0][:2] == (99, 812345) and FakeApp.calls[0][2]["contents"] == "write"
+    assert FakeApp.calls[0][3] == {"workflows": "write"}  # asked for only if the installation grants it (GithubApp)
 
 
 def test_read_github_and_feishu(keys):

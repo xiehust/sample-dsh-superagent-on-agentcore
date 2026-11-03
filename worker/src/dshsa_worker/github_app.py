@@ -15,6 +15,9 @@ from dshsa_worker.ticket_token import b64encode
 
 API = "https://api.github.com"
 WRITE_PERMISSIONS = {"contents": "write", "pull_requests": "write", "issues": "write"}
+# Asked for only when the installation itself grants them (the App owner opted in): `workflows` lets a worker push changes under
+# .github/workflows, which GitHub refuses without it. Requesting a permission the installation lacks would fail the whole token.
+OPTIONAL_WRITE_PERMISSIONS = {"workflows": "write"}
 READ_PERMISSIONS = {"contents": "read", "pull_requests": "read", "issues": "read"}
 
 
@@ -50,7 +53,20 @@ class GithubApp:
     def __init__(self, app_id: str | int, private_key_pem: str, request=_request) -> None:
         self.app_id, self.key, self.request = app_id, private_key_pem, request
 
-    def installation_token(self, installation_id: int, repo_id: int, permissions: dict[str, str]) -> dict[str, str]:
+    def granted(self, installation_id: int) -> dict[str, str]:
+        """The permissions the installation grants (`GET /app/installations/{id}`); empty when GitHub does not say."""
+        status, body, _ = self.request("GET", f"{API}/app/installations/{int(installation_id)}", app_jwt(self.app_id, self.key))
+        if status != 200:
+            return {}
+        value = json.loads(body).get("permissions")
+        return {str(k): str(v) for k, v in value.items()} if isinstance(value, dict) else {}
+
+    def installation_token(self, installation_id: int, repo_id: int, permissions: dict[str, str],
+                           optional: dict[str, str] | None = None) -> dict[str, str]:
+        """A token for one repository with `permissions`, plus each of `optional` the installation grants at that level."""
+        if optional:
+            granted = self.granted(installation_id)
+            permissions = {**permissions, **{k: v for k, v in optional.items() if granted.get(k) == v or (v == "read" and granted.get(k) == "write")}}
         status, body, _ = self.request("POST", f"{API}/app/installations/{int(installation_id)}/access_tokens", app_jwt(self.app_id, self.key),
                                        {"repository_ids": [int(repo_id)], "permissions": permissions})
         if status != 201:
