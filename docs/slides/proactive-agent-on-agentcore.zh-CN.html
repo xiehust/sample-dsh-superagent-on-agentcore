@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>从被动响应到主动感知：dsh-superagent 工作机制与 AgentCore 实现</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --paper: #ffffff;
+    --ink: #1b2533;
+    --ink-2: #4a5768;
+    --ink-3: #7b8796;
+    --line: #dde3ea;
+    --soft: #f1f4f8;
+    --blue: #2f5bd3;
+    --blue-soft: #e8eefc;
+    --teal: #0f8a7e;
+    --teal-soft: #e3f4f1;
+    --amber: #c26a00;
+    --amber-soft: #fdf1e2;
+    --red: #b8433a;
+    --red-soft: #fbeceb;
+    --violet: #6b4fc2;
+    --violet-soft: #efebfa;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  body { overflow: hidden; }
+
+  /* ---------- stage ---------- */
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #deck { width: 1280px; height: 720px; position: relative; transform-origin: center center; }
+  .slide {
+    position: absolute; inset: 0; background: var(--paper); border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(20,30,50,.06), 0 8px 28px rgba(20,30,50,.08);
+    padding: 54px 68px 56px; display: none; flex-direction: column; overflow: hidden;
+  }
+  .slide.active { display: flex; }
+  .slide::after {
+    content: attr(data-n); position: absolute; right: 30px; bottom: 22px;
+    font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums;
+  }
+  .slide::before {
+    content: "dsh-superagent · AgentCore"; position: absolute; left: 68px; bottom: 22px;
+    font-size: 12px; color: var(--ink-3); letter-spacing: .04em;
+  }
+  .slide.cover::before, .slide.cover::after { display: none; }
+
+  /* ---------- type ---------- */
+  .kicker { font-size: 13px; font-weight: 600; letter-spacing: .12em; color: var(--blue); text-transform: uppercase; margin-bottom: 10px; }
+  .kicker.aws { color: var(--amber); }
+  h1 { font-size: 46px; line-height: 1.22; font-weight: 700; letter-spacing: -.01em; }
+  h2 { font-size: 32px; line-height: 1.25; font-weight: 700; margin-bottom: 8px; letter-spacing: -.005em; }
+  .lede { font-size: 18px; color: var(--ink-2); line-height: 1.6; margin-bottom: 22px; max-width: 1060px; }
+  p, li { font-size: 17px; line-height: 1.6; color: var(--ink); }
+  .small, .small li, .small p { font-size: 14.5px; line-height: 1.55; }
+  .muted { color: var(--ink-2); }
+  code, .code { font-family: var(--mono); font-size: .88em; background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: #263447; white-space: nowrap; }
+  ul.dots { list-style: none; }
+  ul.dots li { position: relative; padding-left: 18px; margin: 6px 0; }
+  ul.dots li::before { content: ""; position: absolute; left: 2px; top: .7em; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+  ul.dots.aws li::before { background: var(--amber); }
+  b, strong { font-weight: 650; }
+  .fill { flex: 1; min-height: 0; }
+
+  /* ---------- layout helpers ---------- */
+  .row { display: flex; gap: 20px; }
+  .col { display: flex; flex-direction: column; gap: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+  .card h3 { font-size: 17px; font-weight: 650; margin-bottom: 6px; }
+  .card p, .card li { font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+  .card.tint-blue { background: var(--blue-soft); border-color: #cfdaf7; }
+  .card.tint-teal { background: var(--teal-soft); border-color: #c4e6e0; }
+  .card.tint-amber { background: var(--amber-soft); border-color: #f3d9b6; }
+  .card.tint-red { background: var(--red-soft); border-color: #f0cdca; }
+  .card.tint-violet { background: var(--violet-soft); border-color: #dcd3f3; }
+  .card.tint-soft { background: var(--soft); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); color: var(--ink-2); margin-right: 6px; }
+  .tag.blue { background: var(--blue-soft); color: var(--blue); border-color: #cfdaf7; }
+  .tag.teal { background: var(--teal-soft); color: var(--teal); border-color: #c4e6e0; }
+  .tag.amber { background: var(--amber-soft); color: var(--amber); border-color: #f3d9b6; }
+  .tag.red { background: var(--red-soft); color: var(--red); border-color: #f0cdca; }
+  .tag.violet { background: var(--violet-soft); color: var(--violet); border-color: #dcd3f3; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); line-height: 1.5; }
+  th { font-size: 13px; font-weight: 650; color: var(--ink-2); background: var(--soft); border-bottom: 1px solid #cfd7e1; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  table.compact th, table.compact td { padding: 6px 9px; font-size: 13.5px; }
+
+  /* ---------- flow ---------- */
+  .flow { display: flex; align-items: stretch; gap: 0; }
+  .flow .step { flex: 1; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; position: relative; }
+  .flow .step h4 { font-size: 15px; font-weight: 650; margin-bottom: 4px; }
+  .flow .step p { font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+  .flow .step .who { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; color: var(--ink-3); margin-bottom: 4px; }
+  .flow .arrow { width: 28px; flex: 0 0 28px; display: flex; align-items: center; justify-content: center; color: var(--ink-3); font-size: 18px; }
+  .flow .step.code-step { border-top: 3px solid var(--teal); }
+  .flow .step.llm-step { border-top: 3px solid var(--violet); }
+  .flow .step.ext-step { border-top: 3px solid var(--amber); }
+
+  .legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink-2); margin-top: 12px; }
+  .legend span::before { content: ""; display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: middle; }
+  .legend .l-code::before { background: var(--teal); }
+  .legend .l-llm::before { background: var(--violet); }
+  .legend .l-ext::before { background: var(--amber); }
+
+  .quote { border-left: 3px solid var(--blue); padding: 6px 0 6px 14px; color: var(--ink-2); font-size: 15px; line-height: 1.6; }
+  .quote.amber { border-color: var(--amber); }
+  .chat { font-size: 14px; line-height: 1.55; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .chat .m { margin: 3px 0; }
+  .chat .m b { color: var(--ink-2); font-weight: 600; margin-right: 4px; }
+  .verdict { margin-top: 8px; font-size: 13.5px; line-height: 1.55; }
+
+  .big-num { font-size: 34px; font-weight: 700; color: var(--blue); line-height: 1.1; }
+  .big-num.aws { color: var(--amber); }
+
+  svg text { font-family: var(--sans); }
+
+  /* ---------- cover ---------- */
+  .cover { justify-content: center; padding: 70px 90px; background:
+    linear-gradient(135deg, #ffffff 0%, #ffffff 58%, #eef3fd 58%, #eef3fd 100%); }
+  .cover .sub { font-size: 21px; color: var(--ink-2); margin-top: 18px; line-height: 1.6; }
+  .cover .meta { margin-top: 44px; font-size: 14px; color: var(--ink-3); line-height: 1.8; }
+  .cover .bar { width: 64px; height: 4px; background: var(--blue); margin-bottom: 26px; border-radius: 2px; }
+
+  /* ---------- section divider ---------- */
+  .divider { justify-content: center; background: #f7f9fc; }
+  .divider .num { font-size: 80px; font-weight: 700; color: #d5ddea; line-height: 1; margin-bottom: 14px; }
+  .divider h2 { font-size: 40px; }
+  .divider p { font-size: 19px; color: var(--ink-2); margin-top: 10px; max-width: 900px; }
+
+  /* ---------- chrome ---------- */
+  #progress { position: fixed; left: 0; top: 0; height: 3px; background: var(--blue); transition: width .2s ease; z-index: 10; }
+  #nav { position: fixed; right: 18px; bottom: 14px; display: flex; gap: 6px; z-index: 10; }
+  #nav button { font: 13px var(--sans); color: var(--ink-2); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  #nav button:hover { border-color: #b9c4d2; color: var(--ink); }
+  #nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  #hint { position: fixed; left: 18px; bottom: 16px; font-size: 12px; color: var(--ink-3); z-index: 10; }
+
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    html, body { overflow: visible; background: #fff; height: auto; }
+    #stage { position: static; display: block; }
+    #deck { transform: none !important; width: 1280px; height: auto; }
+    .slide { display: flex !important; position: relative; width: 1280px; height: 720px; border-radius: 0; box-shadow: none; page-break-after: always; break-after: page; }
+    #progress, #nav, #hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="stage"><div id="deck">
+
+<!-- 1 Cover -->
+<section class="slide cover">
+  <div class="bar"></div>
+  <div class="kicker">技术介绍</div>
+  <h1>从被动响应到主动感知<br>dsh-superagent 工作机制与 Amazon Bedrock AgentCore 实现</h1>
+  <p class="sub">一个持续监听 GitHub 与飞书、自行判断何时介入、并把工作派给隔离执行单元的 agent 系统：<br>原型如何工作，以及在 AWS 上如何落地。</p>
+  <div class="meta">
+    参考实现：DeepSeek <b>dsh-superagent</b> 研究原型（MIT）<br>
+    AWS 实现：ECS Fargate · SQS FIFO · DynamoDB · Amazon Bedrock · AgentCore Runtime · Amazon S3 Files
+  </div>
+</section>
+
+<!-- Background (DeepSeek super-agent) -->
+<section class="slide">
+  <div class="kicker">背景</div>
+  <h2>DeepSeek 的 Super-agent 探索</h2>
+  <p class="lede">2026-10-31，DeepSeek Harness 团队在官方公众号发布《Super-agent 设计探索：迈向更自主的 Agent 系统》，并开源了研究原型 <code>dsh-superagent-prototype</code>。</p>
+  <div class="grid3 fill" style="align-content:start;margin-top:14px">
+    <div class="card tint-blue">
+      <h3>开源了什么</h3>
+      <ul class="dots small">
+        <li>MIT 许可的研究原型</li>
+        <li>基于 DeepSeek Harness 及其 Cordis 插件运行时</li>
+        <li>提示词、工具 schema 与领域 core 完整可读</li>
+      </ul>
+    </div>
+    <div class="card tint-amber">
+      <h3>官方定位</h3>
+      <ul class="dots small">
+        <li>参考代码，不是正式产品</li>
+        <li>不适合直接用于生产</li>
+        <li>文章中的部分设计，开源代码里尚未实现</li>
+      </ul>
+    </div>
+    <div class="card tint-teal">
+      <h3>团队的使用方式</h3>
+      <ul class="dots small">
+        <li>团队称内部实例已用于日常研发</li>
+        <li>复现并修复 issue、回应 Code Review</li>
+        <li>推进 DeepSeek Harness 自身的迭代</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="kicker">背景</div>
+  <h2>要解决的问题与架构要点</h2>
+  <div class="grid2 fill" style="align-content:start;margin-top:10px">
+    <div class="card tint-red">
+      <h3>单 Session 的天花板</h3>
+      <ul class="dots small">
+        <li>主流 agent 以单个 Session 为工作单元</li>
+        <li><b>单任务</b>上限取决于模型能力</li>
+        <li><b>多任务</b>上限取决于人的注意力：一个人通常只能同时跟进 3–5 个活跃 session</li>
+        <li><b>目标</b>：让 agent 脱离单 Session 的限制，长期在线、跨平台保持上下文、并行推进多个任务</li>
+      </ul>
+    </div>
+    <div class="card tint-teal">
+      <h3>文章中的架构要点</h3>
+      <ul class="dots small">
+        <li><b>Router + Worker 两层</b>：Router 常驻，接收群聊、GitHub、邮件等消息并分派任务；Worker 持有独立上下文执行具体工作，完成后回报 Router 统一回复</li>
+        <li><b>订阅</b>：Worker 接手 PR 后，后续评论直接发给它</li>
+        <li><b>主动触发 + 投机执行</b>：规则过滤后由模型判断是否行动；后台静默修 bug，能修好才提交</li>
+        <li><b>其他</b>：异步 ReAct Loop、存算分离、外部 Watchdog</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="kicker">背景</div>
+  <h2>从开源原型到 AWS 实现</h2>
+  <table class="compact" style="margin-top:8px">
+    <thead><tr><th style="width:130px">方面</th><th>开源原型</th><th>AWS on AgentCore</th></tr></thead>
+    <tbody>
+      <tr><td>部署单位</td><td>一个进程对应一个团队 + 一个仓库</td><td>多租户；按 (tenant, repo) 划分 cell，复用原型 core</td></tr>
+      <tr><td>消息接入</td><td>轮询 GitHub / 飞书产生 Trigger</td><td>GitHub webhook 经 API Gateway、Lambda 进 SQS FIFO；飞书走长连接</td></tr>
+      <tr><td>控制面</td><td>单进程，状态在单个 SQLite</td><td>ECS Fargate host 承载 cell；每个 cell 一个 SQLite，Litestream 复制到 S3</td></tr>
+      <tr><td>Worker</td><td>每个 Ticket 一个 worker + git worktree，同机运行</td><td>每个 Ticket 一个 AgentCore Runtime session（Claude Agent SDK 或 Codex），持久状态在 S3 Files，microVM 回收后可恢复</td></tr>
+      <tr><td>隔离</td><td>worker 以 <code>danger-full-access</code> 运行，几乎没有隔离</td><td>每个 Ticket 一个 S3 Files access point + 受限 STS 凭证；Runtime 只接受控制面的 IAM 调用</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted" style="margin-top:12px">研判、订阅、Ticket 生命周期的规则与提示词原样复用；变化集中在运行时、存储与隔离。</p>
+</section>
+
+
+<!-- 2 Agenda -->
+<section class="slide">
+  <div class="kicker">目录</div>
+  <h2>内容结构</h2>
+  <div class="fill" style="display:flex;align-items:center">
+    <div class="grid2" style="width:100%;gap:22px 40px">
+      <div class="row" style="gap:16px"><div class="big-num">01</div><div><h3 style="font-size:20px">被动与主动</h3><p class="muted small">主动 agent 需要额外解决的问题</p></div></div>
+      <div class="row" style="gap:16px"><div class="big-num">02</div><div><h3 style="font-size:20px">dsh-superagent 工作机制</h3><p class="muted small">领域模型、感知、授权、Eval、订阅、执行与回报</p></div></div>
+      <div class="row" style="gap:16px"><div class="big-num">03</div><div><h3 style="font-size:20px">原型的 router 与上下文管理</h3><p class="muted small">一个长期会话如何保持轻量</p></div></div>
+      <div class="row" style="gap:16px"><div class="big-num aws">04</div><div><h3 style="font-size:20px">AWS on AgentCore 方案</h3><p class="muted small">架构、cell、无状态判断、worker、安全与可靠性</p></div></div>
+      <div class="row" style="gap:16px"><div class="big-num aws">05</div><div><h3 style="font-size:20px">对比与取舍</h3><p class="muted small">原型与 AWS 实现的差异、已知限制</p></div></div>
+      <div class="row" style="gap:16px"><div class="big-num">06</div><div><h3 style="font-size:20px">模式抽象</h3><p class="muted small">可复用到其他领域的组成部分</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 Divider -->
+<section class="slide divider">
+  <div class="num">01</div>
+  <h2>被动与主动</h2>
+  <p>chat agent 只在被提问时运行；主动 agent 持续接收事件流，并且要自己决定什么时候行动、什么时候保持沉默。</p>
+</section>
+
+<!-- 4 Passive vs proactive -->
+<section class="slide">
+  <div class="kicker">问题定义</div>
+  <h2>两种 agent 的运行模型</h2>
+  <p class="lede">差别不在模型能力，而在系统层：触发方式、状态、执行方式和输出纪律都不同。</p>
+  <table>
+    <thead><tr><th style="width:150px">维度</th><th>被动响应的 chat agent</th><th>主动感知的 agent（dsh-superagent 的做法）</th></tr></thead>
+    <tbody>
+      <tr><td>触发</td><td>用户发起一次提问</td><td>持续接收 GitHub / 飞书事件流；被 @ 只是其中一种信号</td></tr>
+      <tr><td>判断</td><td>默认每问必答</td><td>程序闸门 + LLM 评估：先决定"要不要做"，大部分消息结论是不做</td></tr>
+      <tr><td>授权</td><td>隐含在会话里</td><td>名单、准入表、规则、接受模式；每个任务记录授权依据（Mandate）</td></tr>
+      <tr><td>状态</td><td>一段对话历史</td><td>持久化的 Thread / Ticket / 订阅 / Decision，模型上下文只是快照</td></tr>
+      <tr><td>执行</td><td>同步生成回答</td><td>异步派给隔离的 worker，每个任务独立会话和工作目录，可跨小时持续</td></tr>
+      <tr><td>输出</td><td>每轮都输出</td><td>只在需要人行动或结果可用时开口；进度不外发</td></tr>
+      <tr><td>可审计</td><td>对话记录</td><td>每次判断留 Decision；主动接受需引用证据；先观察模式再放开</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 5 Four questions -->
+<section class="slide">
+  <div class="kicker">问题定义</div>
+  <h2>主动 agent 要回答的四个问题</h2>
+  <p class="lede">dsh-superagent 的各个组件可以按这四个问题归类，后面的章节依次展开。</p>
+  <div class="grid4 fill" style="align-content:start">
+    <div class="card tint-blue">
+      <span class="tag blue">感知</span>
+      <h3 style="margin-top:8px">听什么</h3>
+      <p>接哪些来源、接收全部消息还是只接收 @；消息怎么归入一段对话（Thread）。</p>
+      <p style="margin-top:10px"><b>Source · Trigger · Thread · 准入表</b></p>
+    </div>
+    <div class="card tint-violet">
+      <span class="tag violet">判断</span>
+      <h3 style="margin-top:8px">什么时候做</h3>
+      <p>谁有权发起；没被点名时依据什么规则主动接活；拿不准时怎么办。</p>
+      <p style="margin-top:10px"><b>Policy 闸门 · Eval · 规则 · 接受模式</b></p>
+    </div>
+    <div class="card tint-teal">
+      <span class="tag teal">执行</span>
+      <h3 style="margin-top:8px">谁去做</h3>
+      <p>判断者不干活；每件事交给独立 worker，后续追问直接送达，范围外的退回。</p>
+      <p style="margin-top:10px"><b>Ticket · Mandate · 订阅 · worker</b></p>
+    </div>
+    <div class="card tint-amber">
+      <span class="tag amber">表达</span>
+      <h3 style="margin-top:8px">什么时候开口</h3>
+      <p>确认一次、完成或卡住时回报、一次只问一个具体问题；其余时间保持安静。</p>
+      <p style="margin-top:10px"><b>ack · report · reply 闸门</b></p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:18px">设计原则（原型 <code>docs/000-philosophy.md</code>）：<b>占用尽可能少的人的注意力，给出尽可能多的价值。</b> agent 只在被要求、或团队写下的规则允许时行动；只在有人需要行动或能用上结果时说话。</div>
+</section>
+
+<!-- 6 Divider -->
+<section class="slide divider">
+  <div class="num">02</div>
+  <h2>dsh-superagent 工作机制</h2>
+  <p>一个面向单个 GitHub 仓库的主动编码 agent，监听 GitHub，可选监听飞书；有人请求或规则允许时开出工作项，交给独立的 agent 会话完成并回报。</p>
+</section>
+
+<!-- 7 Domain model -->
+<section class="slide">
+  <div class="kicker">领域模型</div>
+  <h2>九个核心概念</h2>
+  <p class="lede">所有状态都落在这些对象上（原型存 SQLite）；模型看到的永远是它们的摘要。</p>
+  <div class="grid3 fill" style="align-content:start;gap:12px 16px">
+    <div class="card"><h3>Source <span class="tag">来源</span></h3><p>GitHub、飞书等接入方式。负责把原始事件规范化，并给出回复通道。</p></div>
+    <div class="card"><h3>Trigger <span class="tag">消息</span></h3><p>规范化后的一条输入：评论、Issue、群消息、CI 结果。id 由来源确定性生成，重复投递自动去重。</p></div>
+    <div class="card"><h3>Thread <span class="tag">对话</span></h3><p>一段对话。GitHub 是一个 Issue/PR；飞书是一条顶层消息及其回复串。</p></div>
+    <div class="card tint-violet"><h3>Eval <span class="tag violet">判断</span></h3><p>对一个 Thread 上一批待判消息的一次判断，有截止时间；同一 Thread 同时只有一个。</p></div>
+    <div class="card tint-violet"><h3>Decision <span class="tag violet">结论</span></h3><p>Eval 的结果：accept / ignore / stop / reopen / unavailable，附理由，供审计。</p></div>
+    <div class="card tint-teal"><h3>Ticket <span class="tag teal">工作项</span></h3><p>一件被接受的工作。id 由 Eval id 哈希得到，同一 Eval 重放不会开出第二个。</p></div>
+    <div class="card tint-teal"><h3>Mandate <span class="tag teal">授权</span></h3><p>Ticket 的授权依据：强度、发起人、命中的规则、Policy 版本。恢复执行前会重新校验。</p></div>
+    <div class="card tint-teal"><h3>Assignment <span class="tag teal">执行</span></h3><p>Ticket 与一个 worker 会话的绑定，记录状态和最近一次报告。</p></div>
+    <div class="card tint-blue"><h3>Subscription <span class="tag blue">订阅</span></h3><p>"这个 Ticket 关注这个 Thread"。决定新消息直接送给 worker 还是进入 Eval。</p></div>
+  </div>
+</section>
+
+<!-- 8 Lifecycle -->
+<section class="slide">
+  <div class="kicker">端到端</div>
+  <h2>一条消息的生命周期</h2>
+  <p class="lede">示例：飞书群里有人 @ 机器人："能加个暗色模式吗？"</p>
+  <div class="flow">
+    <div class="step ext-step"><div class="who">SOURCE</div><h4>接收与规范化</h4><p>转成 Trigger，归入 Thread，存库。</p></div>
+    <div class="arrow">→</div>
+    <div class="step code-step"><div class="who">程序</div><h4>订阅分发</h4><p>Thread 有订阅的 Ticket？有就直接投给 worker，不再判断。</p></div>
+    <div class="arrow">→</div>
+    <div class="step code-step"><div class="who">程序</div><h4>Policy 闸门</h4><p>按发送者、是否 @、准入表定强度：explicit / inferred / 不准入。</p></div>
+    <div class="arrow">→</div>
+    <div class="step llm-step"><div class="who">LLM</div><h4>Eval</h4><p>读卡片做决定：accept / attach / stop / ignore。</p></div>
+    <div class="arrow">→</div>
+    <div class="step code-step"><div class="who">程序</div><h4>建 Ticket</h4><p>原子写 Ticket、Mandate、订阅、确认回复，启动 worker。</p></div>
+  </div>
+  <div class="flow" style="margin-top:14px">
+    <div class="step llm-step"><div class="who">WORKER</div><h4>执行</h4><p>读原始消息、Thread 历史和代码；实现、验证、提 PR。</p></div>
+    <div class="arrow">→</div>
+    <div class="step code-step"><div class="who">程序</div><h4>后续追问</h4><p>同 Thread 的新消息直接送达；不属于本 Ticket 的由 worker 退回，重新进 Eval。</p></div>
+    <div class="arrow">→</div>
+    <div class="step llm-step"><div class="who">WORKER</div><h4>报告</h4><p>完成、卡住、失败或有问题时提交简短报告。</p></div>
+    <div class="arrow">→</div>
+    <div class="step llm-step"><div class="who">LLM</div><h4>回复</h4><p>决定回不回、回什么；回到 Ticket 最初来源的对话。</p></div>
+    <div class="arrow">→</div>
+    <div class="step ext-step"><div class="who">SOURCE</div><h4>发出</h4><p>经 Outbox 发到 GitHub / 飞书；普通进展不外发。</p></div>
+  </div>
+  <div class="legend"><span class="l-code">确定性程序（不调模型）</span><span class="l-llm">LLM 判断或执行</span><span class="l-ext">外部系统</span></div>
+  <p class="small muted" style="margin-top:12px">模型只出现在三处：判断（Eval）、执行（worker）、回复措辞（reply）。归属、授权、去重、投递、重试都是确定性代码。</p>
+</section>
+
+<!-- 9 Thread -->
+<section class="slide">
+  <div class="kicker">感知 · Thread</div>
+  <h2>Thread：消息如何归入一段对话</h2>
+  <p class="lede">Thread key 写作 <code>source:id</code>。订阅、Eval 和 Ticket 关联都以 Thread 为单位。</p>
+  <div class="grid2 fill" style="align-content:start">
+    <div class="card">
+      <h3>GitHub：一个 Issue 或 PR = 一个 Thread</h3>
+      <table class="compact" style="margin-top:6px">
+        <tr><th>消息</th><th>Thread key</th></tr>
+        <tr><td>新开 Issue / PR</td><td><code>github:42</code></td></tr>
+        <tr><td>评论、review、行内评论</td><td><code>github:42</code></td></tr>
+        <tr><td>PR 的 CI 结果</td><td><code>github:42</code></td></tr>
+        <tr><td>默认分支 CI</td><td><code>github:ci:main</code></td></tr>
+      </table>
+      <p class="small muted" style="margin-top:8px">一个部署（AWS 版一个 cell）只对应一个仓库，编号即可唯一。</p>
+    </div>
+    <div class="card">
+      <h3>飞书：顶层消息 + 它的回复串 = 一个 Thread</h3>
+      <p style="margin:8px 0"><code>feishu:&lt;chat_id&gt;:&lt;root_id 或自身 message_id&gt;</code></p>
+      <ul class="dots small">
+        <li>群里直接发一条：开一个新 Thread</li>
+        <li>回复它或在回复串里继续：飞书带 <code>root_id</code>，归入同一 Thread</li>
+        <li>话题群：一个话题就是一个 Thread</li>
+        <li>一个群 ≠ 一个 Thread；群只是回复通道</li>
+      </ul>
+      <div class="quote amber small" style="margin-top:10px">实际影响：在飞书追问时直接另发一条而不是"回复"，会成为新 Thread，不会自动关联到原 Ticket。</div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 Admission -->
+<section class="slide">
+  <div class="kicker">感知 · 准入</div>
+  <h2>听到什么：接收范围与准入表</h2>
+  <p class="lede">Source 配置决定"进来什么"，准入表决定"进来的消息算什么"。未 @ 的消息只在该范围被设为接收全部消息时才可能进入。</p>
+  <div class="row fill" style="align-items:flex-start">
+    <div class="col" style="flex:1.05">
+      <div class="card">
+        <h3>接收范围（准入表的行）</h3>
+        <ul class="dots small">
+          <li><b>飞书</b>：每个已配置的群；其他 @ 了机器人的群；私聊。群可选"全部消息"或"仅 @"</li>
+          <li><b>GitHub</b>：新 Issue、新 PR、评论、默认分支 CI；每个范围可开"接收全部"</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>机器人与 CI</h3>
+        <ul class="dots small">
+          <li>名单上的机器人（如 <code>dependabot[bot]</code>）最多产生 inferred 候选，不能发起明确请求、不能 stop</li>
+          <li>其他机器人不准入；CI 结果没有发送者，只适用最后一列</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="flex:1">
+      <h3>准入表的三个单元格（每个范围一行）</h3>
+      <table class="compact" style="margin-top:6px">
+        <tr><th>发送者</th><th>可选</th><th>默认</th></tr>
+        <tr><td>在名单内，未 @</td><td>inferred / ignore</td><td><span class="tag violet">inferred</span></td></tr>
+        <tr><td>不在名单，@ 了</td><td>explicit / inferred / ignore</td><td><span class="tag">ignore</span></td></tr>
+        <tr><td>不在名单，未 @</td><td>inferred / ignore</td><td><span class="tag">ignore</span></td></tr>
+      </table>
+      <p class="small muted" style="margin-top:10px">"在名单内且 @ 了"不查表，直接是 explicit。把"不在名单，@ 了"设为 explicit，相当于把一个支持群开放给所有人提需求。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11 Strength & mode -->
+<section class="slide">
+  <div class="kicker">判断 · 闸门</div>
+  <h2>强度与接受模式：主动能力如何受控放开</h2>
+  <p class="lede">闸门是确定性代码，先给每条消息定强度；主动（inferred）路径另受接受模式约束，默认只记录不执行。</p>
+  <div class="grid3" style="margin-bottom:18px">
+    <div class="card tint-blue"><span class="tag blue">explicit</span><h3 style="margin-top:8px">明确请求</h3><p>名单内的人 @ 或私聊机器人；名单内的人在已有 Ticket 的 Thread 上追问；准入表设为 explicit 的单元格。<br><b>任何模式下都生效。</b></p></div>
+    <div class="card tint-violet"><span class="tag violet">inferred</span><h3 style="margin-top:8px">推断候选</h3><p>没人点名，但可能符合团队写下的规则：名单内的人未 @ 的讨论、名单上机器人的消息、名单外的人在已有 Ticket 上的追问。</p></div>
+    <div class="card tint-soft"><span class="tag">不准入</span><h3 style="margin-top:8px">直接记录</h3><p>其他机器人、准入表 ignore 的消息、<code>off</code> 模式下的所有 inferred 情形。不调用模型。</p></div>
+  </div>
+  <table>
+    <thead><tr><th style="width:140px">接受模式</th><th>inferred 候选的处理</th><th style="width:300px">用途</th></tr></thead>
+    <tbody>
+      <tr><td><code>off</code></td><td>不产生候选</td><td>只接明确请求</td></tr>
+      <tr><td><code>observe</code>（默认）</td><td>照常评估；评估为可接受时记为 ignore 并标注 <code>would_accept</code>，不开 Ticket</td><td>上线初期审阅"本来会做什么"</td></tr>
+      <tr><td><code>auto</code></td><td>评估为可接受且命中至少一条启用规则时，开 Ticket</td><td>审阅满意后放开</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted" style="margin-top:12px">规则、模式和各 Source 的 Policy 合成 Policy 版本。版本变化会作废进行中的 Eval 并重新排队，并通知受影响的在途 Ticket。</p>
+</section>
+
+<!-- 12 Eval explicit -->
+<section class="slide">
+  <div class="kicker">判断 · Eval（明确请求）</div>
+  <h2>明确请求：路由而不是改写</h2>
+  <p class="lede">判断者调用 <code>orchestrator_route</code>，对每条候选四选一。提示词 <code>dispatch.md</code> 的核心约束是：只做路由，不替人设计方案。</p>
+  <div class="grid2 fill" style="align-content:start">
+    <div class="col">
+      <div class="card"><h3><span class="tag teal">accept</span>新工作</h3><p>给出标题、worktree 名和一句确认回复。原话交给 worker，不附加配色方案、验收标准或检查清单；路由备注最多 30 词。</p></div>
+      <div class="card"><h3><span class="tag blue">attach</span>并入已有 Ticket</h3><p>只有消息明确指向该 Ticket 才允许：引用了它的 PR/Issue、源消息或确认消息，或"刚才那个改动"且只有一个 Ticket 对得上。话题相近不算。</p></div>
+      <div class="card"><h3><span class="tag red">stop</span>停止</h3><p>有权限的人要求停止。worker 报告卡住不是 stop 的理由。</p></div>
+      <div class="card"><h3><span class="tag">ignore</span>普通讨论</h3><p>写明理由，留下 Decision。</p></div>
+    </div>
+    <div class="col">
+      <div class="chat"><div class="m"><b>A</b>@机器人 能加个暗色模式吗？</div></div>
+      <div class="verdict">→ <span class="tag teal">accept</span> <code>add-dark-mode</code>，确认"好的，我来加暗色模式"</div>
+      <div class="chat"><div class="m"><b>A</b>@机器人 #42 那个按钮颜色再深一点</div></div>
+      <div class="verdict">→ <span class="tag blue">attach</span> #42 属于某个 Ticket 的 PR，消息明确指向它</div>
+      <div class="chat"><div class="m"><b>A</b>@机器人 登录页也加个暗色模式</div></div>
+      <div class="verdict">→ 新请求：<span class="tag teal">accept</span> 或 <span class="tag">ignore</span>，不能因为话题相近就 attach</div>
+      <div class="chat"><div class="m"><b>A</b>@机器人 暗色模式那个先别做了</div></div>
+      <div class="verdict">→ <span class="tag red">stop</span> 对应 Ticket</div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 Eval inferred -->
+<section class="slide">
+  <div class="kicker">判断 · Eval（主动评估）</div>
+  <h2>主动评估：没人点名时，凭什么接活</h2>
+  <p class="lede">提示词 <code>admission.md</code> 要求：接受前必须确认三个事实，并对每条启用的规则逐一给出判断；拿不准就安静忽略。</p>
+  <div class="row" style="gap:16px;margin-bottom:16px">
+    <div class="card tint-violet" style="flex:1"><div class="big-num" style="font-size:26px;color:var(--violet)">①</div><h3>针对本项目</h3><p>讨论的是这个仓库，不是别家产品。</p></div>
+    <div class="card tint-violet" style="flex:1"><div class="big-num" style="font-size:26px;color:var(--violet)">②</div><h3>有实现意图</h3><p>参与者想要一个具体改动被实现；短句附和一个具体提议也算。</p></div>
+    <div class="card tint-violet" style="flex:1"><div class="big-num" style="font-size:26px;color:var(--violet)">③</div><h3>方向已定</h3><p>小的本地改动即可完成，没有留待产品或设计决定的部分。</p></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>结构化输出 <code>orchestrator_eval_decide</code></h3>
+      <ul class="dots small">
+        <li><code>direction</code>：implementation_requested、target_basis（specified / existing-standard / undetermined）、requires_design_decision、evidence</li>
+        <li><code>rule_assessments</code>：每条启用规则一项，matched + 理由</li>
+        <li><code>intent_evidence</code>：三个事实的原文引用</li>
+        <li><code>decision</code>：accept / ignore / unavailable（工具或读图失败）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>规则（团队用自然语言编写，可增删）</h3>
+      <ul class="dots small">
+        <li><b>copy</b>：错别字、措辞、标点、现有翻译的修正</li>
+        <li><b>visual</b>：局部间距、对齐、溢出、样式，需有明确目标或可恢复的现成标准</li>
+        <li>范围上限：仓库内的小型内部改动；规则只能收窄，不能放大</li>
+        <li>Ticket 的 Mandate 记录命中的规则，worker 会收到规则原文</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 14 Eval examples -->
+<section class="slide">
+  <div class="kicker">判断 · Eval（主动评估示例）</div>
+  <h2>三个例子（取自提示词）</h2>
+  <p class="lede">同样是群里的讨论，结论取决于意图和目标是否已经确定，而不是关键词。</p>
+  <div class="grid3 fill" style="align-content:start">
+    <div class="card">
+      <div class="chat"><div class="m"><b>A</b>（转发一段别家产品的讨论）</div><div class="m"><b>B</b>也许我们的 app 也可以像他们那样显示未读数</div></div>
+      <div class="verdict"><span class="tag">ignore</span></div>
+      <p class="small muted" style="margin-top:6px">是偏好，不是请求（事实②不成立）；也是新功能，不在 copy / visual 范围内。</p>
+    </div>
+    <div class="card tint-teal">
+      <div class="chat" style="background:#fff"><div class="m"><b>A</b>（本项目截图）这个按钮文案有点怪</div><div class="m"><b>B</b>就叫『保存』就行</div></div>
+      <div class="verdict"><span class="tag teal">accept</span> 命中 <code>copy</code></div>
+      <p class="small muted" style="margin-top:6px">三个事实都成立；没有祈使句也算意图成立。<code>observe</code> 模式下记为 would_accept，<code>auto</code> 才开 Ticket。</p>
+    </div>
+    <div class="card">
+      <div class="chat"><div class="m"><b>A</b>这个横幅和其他卡片长得不一样；表格行也还是太高</div></div>
+      <div class="verdict"><span class="tag">ignore</span>（安静）</div>
+      <p class="small muted" style="margin-top:6px">"不一样""太高"都没有目标样式，<code>target_basis = undetermined</code>。不回复、不派活、不主动追问，等后续消息把方向说清楚。</p>
+    </div>
+  </div>
+  <div class="card tint-soft" style="margin-top:14px">
+    <p class="small"><b>其他约束：</b>一条源消息最多一个 Ticket；规则冲突或范围模糊时 ignore；Thread 已有相关 Ticket 时 ignore 而不是重复接受；评估只读，不改文件、不发消息、不转交。</p>
+  </div>
+</section>
+
+<!-- 15 Subscription -->
+<section class="slide">
+  <div class="kicker">执行 · 订阅</div>
+  <h2>订阅：让后续对话直接找到对的 worker</h2>
+  <p class="lede">订阅存在 <code>thread.subscriptions</code> 中。它把"继续已有工作"与"判断新工作"分成两条路径，追问不必每次经过判断者。</p>
+  <div class="grid2 fill" style="align-content:start">
+    <div class="col">
+      <div class="card"><h3>何时建立订阅</h3>
+        <ul class="dots small">
+          <li>accept：订阅触发消息所在的 Thread</li>
+          <li>attach：订阅被并入消息的 Thread</li>
+          <li>Ticket 开了 PR：订阅该 PR 的 Thread</li>
+          <li>worker 认为相关：仅作上下文的订阅</li>
+        </ul>
+      </div>
+      <div class="card"><h3>何时解除</h3>
+        <ul class="dots small">
+          <li>worker 判定该 Thread 与本 Ticket 无关，并退回其中的消息</li>
+          <li>有人在面板上退订</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card tint-blue"><h3>新消息到达时</h3>
+        <ul class="dots small">
+          <li><b>有订阅</b>：作为 Input 直接投给 worker，不开 Eval，也不授予新权限</li>
+          <li><b>已结束的 Ticket</b>：有人发言即唤醒；机器人和 CI 不唤醒；被人 stop 的不再接收</li>
+          <li><b>没有 Ticket 认领</b>：人的消息和所有机器人消息进入 Eval</li>
+          <li><b>仅上下文订阅</b>：worker 能看到，但不唤醒、不认领</li>
+        </ul>
+      </div>
+      <div class="card tint-amber"><h3>退回（handback）</h3>
+        <p>worker 认为追问超出本 Ticket 范围，或属于别的 Ticket，就退回并写明理由。消息带着 <code>handed_back</code> 重新成为候选，不能再并回原 Ticket。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 Worker & report -->
+<section class="slide">
+  <div class="kicker">执行与表达</div>
+  <h2>worker 与回报纪律</h2>
+  <p class="lede">判断者不读代码、不调查技术问题；worker 回到源头读原文，自己判断需求、实现和验证。</p>
+  <div class="grid2 fill" style="align-content:start">
+    <div class="card">
+      <h3>worker 的工具（与控制面的全部接口）</h3>
+      <table class="compact">
+        <tr><th>工具</th><th>作用</th></tr>
+        <tr><td><code>ack</code></td><td>确认已接手某条消息</td></tr>
+        <tr><td><code>report</code></td><td>progress / waiting / ready / blocked / failed / dropped，可带一个具体问题、PR 号</td></tr>
+        <tr><td><code>handback</code></td><td>退回超出范围的消息</td></tr>
+        <tr><td><code>thread.follow</code></td><td>为上下文关注另一个 Thread</td></tr>
+        <tr><td><code>thread.unrelated</code></td><td>声明某个 Thread 与本 Ticket 无关</td></tr>
+      </table>
+      <p class="small muted" style="margin-top:8px">每个 Ticket 一个独立会话和工作目录；按影响范围停止：本地改动做到可审阅的结果，需要设计决定的就停下来提问。</p>
+    </div>
+    <div class="col">
+      <div class="card tint-amber">
+        <h3>什么时候对外说话</h3>
+        <ul class="dots small">
+          <li>接受时确认一次，说明要做什么</li>
+          <li>ready、blocked、failed、dropped，或报告里带问题时才组织回复</li>
+          <li>回复可以选择不发（<code>send=false</code>）</li>
+          <li>回到 Ticket 最初来源的对话；飞书来源的结果不以 GitHub 评论代替</li>
+          <li>PR 合并 / 关闭通知由程序发一次，不重复宣布</li>
+        </ul>
+      </div>
+      <div class="card tint-soft">
+        <h3>被忽略的消息</h3>
+        <p>每次 ignore 都留 Decision。AWS 实现另有 <code>decision ignored</code> 日志、面板"最近被忽略"列表，以及明确请求被忽略时的一次提示回复（可配置）。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 Divider router -->
+<section class="slide divider">
+  <div class="num">03</div>
+  <h2>原型的 router 与上下文管理</h2>
+  <p>原型用一个长期存在的 DeepSeek Harness 会话（main Session）承担判断和回复。核心问题是：一条不断变长的对话如何保持可控。</p>
+</section>
+
+<!-- 18 Router context -->
+<section class="slide">
+  <div class="kicker">原型 · router</div>
+  <h2>只放路由需要的信息，状态在数据库，细节用指针</h2>
+  <div class="grid3 fill" style="align-content:start;margin-top:10px">
+    <div class="card">
+      <h3>卡片而非原文</h3>
+      <p>推给 router 的是截断的候选卡片：消息、Thread 上的 Ticket（最多 8 个）、已送达、被引用的 Ticket、退回理由。细节用 <code>orchestrator_read</code> 按资源名读：<code>ticket/&lt;id&gt;</code>、<code>thread/&lt;key&gt;</code>……文本页 4–8k 字符，列表分页。</p>
+    </div>
+    <div class="card">
+      <h3>两种推送</h3>
+      <p><b>relay</b>（唤醒）：候选卡片、follow_up、worker 报告（摘要 ≤600 字符）。<br><b>notice</b>（只追加）：Ticket 结束、设置变更等。同名 notice 未送达时被替换；router 自己做的操作不回送 notice。</p>
+    </div>
+    <div class="card">
+      <h3>提示词每次重拼</h3>
+      <p>规则与 Policy 不依赖对话历史，每次调用前从当前设置生成；Policy 段放最后，修改立即生效且不打乱前缀。router 不读仓库的 <code>AGENTS.md</code>。</p>
+    </div>
+    <div class="card">
+      <h3>主动评估的有界窗口</h3>
+      <p><code>orchestrator_eval</code> 给出：Trigger ≤4,000 字符、相关 Ticket ≤8、Thread 前 5 条 + Trigger 前后各 5 条，其余为 50 字符 stub，可按 id 展开或读图。</p>
+    </div>
+    <div class="card">
+      <h3>压缩交给 Harness</h3>
+      <p>应用层不做压缩；提示词要求压缩后重新查看 Ticket 摘要。程序兜底：accept 按 Eval 幂等、relay/notice 按 request id 去重。</p>
+    </div>
+    <div class="card">
+      <h3>不让它等待</h3>
+      <p><code>noWait</code> 守卫拒绝 sleep、&gt;30 秒的 shell timeout、&gt;5 秒的 job wait。新候选和报告会自动推送，停下来等只会积压。</p>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:14px">结果：router 的上下文里基本只有"谁、什么事、交给了谁、结果如何"。</div>
+</section>
+
+<!-- 19 Divider AWS -->
+<section class="slide divider">
+  <div class="num" style="color:#f1d6b3">04</div>
+  <h2>AWS on AgentCore 方案</h2>
+  <p>保留原型的领域内核与提示词，把运行时换成 AWS 托管服务：多租户、每个仓库一个隔离 cell、每个 Ticket 一个 AgentCore Runtime 会话。</p>
+</section>
+
+<!-- 20 Architecture -->
+<section class="slide">
+  <div class="kicker aws">架构</div>
+  <h2>总体架构</h2>
+  <div class="fill" style="display:flex;align-items:center;justify-content:center">
+  <svg viewBox="0 0 1144 520" width="1144" height="520" role="img" aria-label="AWS 架构图">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8792a2"/></marker>
+    </defs>
+    <style>
+      .bx { fill:#fff; stroke:#cfd7e1; stroke-width:1.2; }
+      .bx-a { fill:#fdf1e2; stroke:#f0cf9f; stroke-width:1.2; }
+      .bx-b { fill:#e8eefc; stroke:#c7d4f5; stroke-width:1.2; }
+      .bx-t { fill:#e3f4f1; stroke:#bfe2dc; stroke-width:1.2; }
+      .bx-v { fill:#efebfa; stroke:#d8cff1; stroke-width:1.2; }
+      .grp { fill:#f7f9fc; stroke:#b9c4d2; stroke-width:1.2; stroke-dasharray:5 4; }
+      .t { font-size:13px; fill:#1b2533; font-weight:600; }
+      .s { font-size:11.5px; fill:#4a5768; }
+      .g { font-size:12px; fill:#7b8796; font-weight:600; letter-spacing:.05em; }
+      .ln { stroke:#8792a2; stroke-width:1.4; fill:none; marker-end:url(#ar); }
+      .ln-d { stroke:#8792a2; stroke-width:1.2; fill:none; stroke-dasharray:4 3; marker-end:url(#ar); }
+      .lb { font-size:11px; fill:#7b8796; }
+    </style>
+
+    <!-- sources -->
+    <text x="0" y="16" class="g">入口</text>
+    <rect x="0" y="30" width="150" height="58" rx="6" class="bx"/>
+    <text x="12" y="54" class="t">GitHub App</text><text x="12" y="73" class="s">webhook（HMAC 校验）</text>
+    <rect x="0" y="108" width="150" height="58" rx="6" class="bx-a"/>
+    <text x="12" y="132" class="t">API GW + Lambda</text><text x="12" y="151" class="s">按 repo 查路由</text>
+    <rect x="0" y="210" width="150" height="58" rx="6" class="bx"/>
+    <text x="12" y="234" class="t">飞书 / Lark</text><text x="12" y="253" class="s">长连接，无公网入口</text>
+    <path d="M75,88 L75,106" class="ln"/>
+
+    <!-- queue -->
+    <rect x="190" y="108" width="132" height="76" rx="6" class="bx-a"/>
+    <text x="202" y="132" class="t">SQS FIFO</text><text x="202" y="151" class="s">每个 cell 一个队列</text><text x="202" y="168" class="s">按 id 去重、保序</text>
+    <path d="M150,137 L188,137" class="ln"/>
+
+    <!-- host group -->
+    <rect x="356" y="22" width="420" height="356" rx="8" class="grp"/>
+    <text x="370" y="44" class="g">ECS FARGATE · dshsa-host · N 个 task</text>
+    <rect x="372" y="58" width="390" height="40" rx="6" class="bx"/>
+    <text x="384" y="83" class="t">LeaseManager</text><text x="500" y="83" class="s">DynamoDB 租约 + fence，保证单写者</text>
+
+    <rect x="372" y="110" width="390" height="196" rx="6" class="bx-b"/>
+    <text x="384" y="132" class="t">cell × k（每个 tenant × repo 一个）</text>
+    <rect x="384" y="144" width="176" height="44" rx="5" class="bx"/><text x="394" y="163" class="t">DSH core Engine</text><text x="394" y="180" class="s">原样复用</text>
+    <rect x="572" y="144" width="178" height="44" rx="5" class="bx"/><text x="582" y="163" class="t">SQLite + Effects</text><text x="582" y="180" class="s">Litestream → S3</text>
+    <rect x="384" y="198" width="176" height="44" rx="5" class="bx-t"/><text x="394" y="217" class="t">Policy 闸门</text><text x="394" y="234" class="s">确定性，不调模型</text>
+    <rect x="572" y="198" width="178" height="44" rx="5" class="bx-v"/><text x="582" y="217" class="t">Assessor / Replier</text><text x="582" y="234" class="s">无状态 Bedrock 调用</text>
+    <rect x="384" y="252" width="176" height="44" rx="5" class="bx"/><text x="394" y="271" class="t">Outbox</text><text x="394" y="288" class="s">回复 GitHub / 飞书</text>
+    <rect x="572" y="252" width="178" height="44" rx="5" class="bx"/><text x="582" y="271" class="t">Executor</text><text x="582" y="288" class="s">InvokeAgentRuntime</text>
+
+    <rect x="372" y="316" width="186" height="52" rx="6" class="bx"/>
+    <text x="384" y="337" class="t">飞书 Connector</text><text x="384" y="355" class="s">每 tenant 一个，长连接+补拉</text>
+    <rect x="570" y="316" width="192" height="52" rx="6" class="bx"/>
+    <text x="582" y="337" class="t">内部 HTTP :8080</text><text x="582" y="355" class="s">面板写入、token 刷新</text>
+
+    <path d="M322,146 L370,170" class="ln"/>
+    <path d="M150,239 C260,239 260,354 370,354" class="ln-d"/>
+    <path d="M372,328 C318,328 296,262 296,188" class="ln-d"/>
+    <text x="180" y="318" class="lb">source.event</text>
+
+    <!-- right side -->
+    <text x="812" y="16" class="g">托管服务</text>
+    <rect x="812" y="30" width="332" height="58" rx="6" class="bx-v"/>
+    <text x="824" y="54" class="t">Amazon Bedrock</text><text x="824" y="73" class="s">Converse：每个 Eval / 每份报告一次调用</text>
+    <path d="M750,212 C784,212 784,59 810,59" class="ln"/>
+
+    <rect x="812" y="108" width="332" height="150" rx="8" class="grp"/>
+    <text x="824" y="128" class="g">AGENTCORE RUNTIME · 每个 Ticket 一个会话</text>
+    <rect x="824" y="138" width="150" height="50" rx="5" class="bx"/><text x="834" y="160" class="t">gateway（root）</text><text x="834" y="177" class="s">持有 ticket token</text>
+    <rect x="984" y="138" width="148" height="50" rx="5" class="bx"/><text x="994" y="160" class="t">agent（uid 1000）</text><text x="994" y="177" class="s">Claude SDK / Codex</text>
+    <rect x="824" y="198" width="308" height="48" rx="5" class="bx-t"/><text x="834" y="218" class="t">/mnt/work = 本 Ticket 的 S3 Files AP</text><text x="834" y="235" class="s">对话记录、inbox、repo.bundle；代码工作区在本地盘</text>
+    <path d="M750,274 C796,274 790,176 822,176" class="ln"/>
+
+    <rect x="812" y="276" width="160" height="62" rx="6" class="bx-a"/>
+    <text x="824" y="299" class="t">worker-api</text><text x="824" y="317" class="s">私有 API GW + Lambda</text><text x="824" y="332" class="s">事件 / 只读 / GitHub 凭证</text>
+    <rect x="984" y="276" width="160" height="62" rx="6" class="bx-a"/>
+    <text x="996" y="299" class="t">broker / provisioner</text><text x="996" y="317" class="s">Lambda：建 Ticket 的 AP，</text><text x="996" y="332" class="s">签发挂载凭证</text>
+    <path d="M892,258 L892,274" class="ln"/>
+    <path d="M892,338 L892,384 Q892,396 880,396 L252,396 Q240,396 240,384 L240,188" class="ln-d"/>
+    <text x="430" y="416" class="lb">worker.event（ack / report / handback …）回到 cell 队列</text>
+
+    <!-- bottom data -->
+    <rect x="0" y="440" width="270" height="62" rx="6" class="bx-a"/>
+    <text x="12" y="463" class="t">DynamoDB</text><text x="12" y="482" class="s">tenants · cells · routes · leases · ticket-storage</text>
+    <rect x="290" y="440" width="250" height="62" rx="6" class="bx-a"/>
+    <text x="302" y="463" class="t">Amazon S3</text><text x="302" y="482" class="s">state（Litestream 副本）· data（S3 Files）</text>
+    <rect x="560" y="440" width="270" height="62" rx="6" class="bx-a"/>
+    <text x="572" y="463" class="t">KMS</text><text x="572" y="482" class="s">ES256 签发 ticket token（≤2h）</text>
+    <rect x="850" y="440" width="294" height="62" rx="6" class="bx-a"/>
+    <text x="862" y="463" class="t">面板</text><text x="862" y="482" class="s">CloudFront + Cognito + panel-api → 内部 HTTP</text>
+  </svg>
+  </div>
+</section>
+
+<!-- 21 Principles -->
+<section class="slide">
+  <div class="kicker aws">架构原则</div>
+  <h2>四条架构原则</h2>
+  <div class="grid2 fill" style="align-content:start;margin-top:12px">
+    <div class="card tint-blue"><h3>每个 cell 单写者</h3><p>一个 Engine 同一时刻独占一个 SQLite 文件，由带 fence 的 DynamoDB 租约保证。对 cell 的所有写入（消息、worker 事件、管理命令）只经两个入口：该 cell 的 FIFO 队列，或租约持有者的内部 HTTP。</p></div>
+    <div class="card tint-blue"><h3>DSH core 原样复用</h3><p><code>packages/core</code> 是原型 <code>src/core</code> 与 <code>policy.ts</code> 的拷贝，决策工具 schema 同名同结构；只允许改适配层。判断规则、授权、订阅逻辑与原型一致。</p></div>
+    <div class="card tint-amber"><h3>worker 不可信</h3><p>worker 唯一的权限是 ticket token；它能触达的一切都按 (tenant, cell, ticket) 限定：只读本仓库、只读已绑定的飞书群、只挂载自己的存储。</p></div>
+    <div class="card tint-violet"><h3>没有长期 router 会话</h3><p>判断和回复写作拆成两个无状态 Bedrock 调用（Assessor、Replier）。每次调用的输入是一张现拼的、有上限的卡片，用完即弃；权威状态始终在 SQLite。</p></div>
+  </div>
+  <p class="small muted" style="margin-top:12px">隔离单元：cell = 一个 (tenant, GitHub 仓库)，<code>cellId = &lt;tenantId&gt;--gh&lt;repoId&gt;</code>。飞书群通过路由表绑定到 cell。</p>
+</section>
+
+<!-- 22 Cell -->
+<section class="slide">
+  <div class="kicker aws">控制面 · cell</div>
+  <h2>cell 的运行方式</h2>
+  <p class="lede">cell 不是独立进程：一个 Fargate task 是一个 Node 进程，进程内承载多个 cell 对象。</p>
+  <div class="row fill" style="align-items:flex-start">
+    <div class="card" style="flex:1.1;font-family:var(--mono);font-size:13px;line-height:1.75;white-space:pre;color:#263447;background:var(--soft)">Fargate task（dshsa-host）
+└─ Node 进程：HostProcess
+   ├─ cell A
+   │   ├─ Engine + Policy 闸门 + Effects 队列
+   │   ├─ SQLite  /data/cells/A/orchestrator.sqlite
+   │   ├─ Assessor · Replier · Executor · Outbox
+   │   ├─ SQS 消费循环（cell A 的 FIFO 队列）
+   │   └─ 子进程 litestream replicate → s3://…/cells/A/
+   ├─ cell B …（默认最多 20 个）
+   ├─ 飞书 Connector（默认最多 5 个）
+   └─ 内部 HTTP :8080</div>
+    <div class="col" style="flex:1">
+      <div class="card"><h3>租约与迁移</h3>
+        <ul class="dots small aws">
+          <li>租约 <code>cell#&lt;cellId&gt;</code>：TTL 30 秒，每 10 秒续约，条件写 <code>owner = 我 AND fence = f</code></li>
+          <li>续约失败或临近过期：先停消费、停写、关库，再放手</li>
+          <li>接手方只接过期租约，<code>fence + 1</code>，先 <code>litestream restore</code> 再打开数据库</li>
+        </ul>
+      </div>
+      <div class="card"><h3>为什么每个 cell 一个 SQLite</h3>
+        <ul class="dots small aws">
+          <li>沿用原型存储模型，Engine 无需改动</li>
+          <li>cell 之间故障隔离，迁移粒度清晰</li>
+          <li>Fargate 本地盘不持久，S3 上的 Litestream 副本才是持久那一份</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 23 Stateless assessor -->
+<section class="slide">
+  <div class="kicker aws">控制面 · 判断</div>
+  <h2>无状态 Assessor / Replier</h2>
+  <p class="lede">同一套提示词和工具 schema，换成"一次调用一个决定"。模型必须调用与原型同名的工具，结果交给同一个 Engine 执行。</p>
+  <div class="grid2 fill" style="align-content:start">
+    <div class="card">
+      <h3>Assessor 每次调用的输入</h3>
+      <table class="compact">
+        <tr><th>部分</th><th>内容</th></tr>
+        <tr><td>system 前缀</td><td>原型 router 的全部提示词段落 + 无状态说明；走 prompt cache</td></tr>
+        <tr><td>system 尾部</td><td>Policy 段（启用规则、接受模式），放在 cache 点之后</td></tr>
+        <tr><td>卡片</td><td>本批 Trigger、Thread 上的 Ticket（含最近报告摘要 ≤300 字符）、送达与退回情况</td></tr>
+        <tr><td>Thread 上下文</td><td>仅 inferred：从 GitHub / 飞书现读最近 20 条</td></tr>
+      </table>
+      <p class="small muted" style="margin-top:8px">explicit 候选调用 <code>orchestrator_route</code>；inferred 调用 <code>orchestrator_eval_decide</code>。</p>
+    </div>
+    <div class="col">
+      <div class="card tint-violet"><h3>运行约束</h3>
+        <ul class="dots small">
+          <li>截止时间 = Eval 超时（默认 120 秒）；并发上限 4</li>
+          <li>失败记为 <code>unavailable</code>，由 Engine 按原型规则重排重试</li>
+          <li>Replier：仅 ready / blocked / failed / dropped 或带问题的报告触发，调用 <code>orchestrator_reply</code>，可选择不发</li>
+          <li>模型按 cell 在面板配置</li>
+        </ul>
+      </div>
+      <div class="card tint-soft"><h3>上下文管理的变化</h3>
+        <ul class="dots small">
+          <li>没有历史 → 不需要压缩，也没有压缩后遗忘</li>
+          <li>不能按需再读 → 卡片要一次给够；提示词要求不编造 id 或引文</li>
+          <li>一个候选失败只影响一个 Eval，不会阻塞其他候选</li>
+          <li>notice 没有接收者，只记录给面板</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 24 Worker -->
+<section class="slide">
+  <div class="kicker aws">数据面 · worker</div>
+  <h2>worker：每个 Ticket 一个 AgentCore Runtime 会话</h2>
+  <p class="lede">cell 通过 <code>InvokeAgentRuntime</code> 下发 <code>start / deliver / stop / status</code>；worker 异步运行，通过 worker-api 回传事件。</p>
+  <div class="grid3" style="align-content:start">
+    <div class="card">
+      <h3>会话与身份</h3>
+      <ul class="dots small aws">
+        <li><code>runtimeSessionId</code> 由 cellId + ticketId 派生，同一 Ticket 始终落在同一会话</li>
+        <li>gateway 以 root 运行，持有 token；agent 以 uid 1000 运行，经本地代理访问控制面</li>
+        <li>两种 worker：Claude Agent SDK、Codex（Bedrock），按 cell 选择</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>存储布局</h3>
+      <ul class="dots small aws">
+        <li><b>本地盘</b>：git 工作区（实测 S3 Files 上 git 慢 17–384 倍）</li>
+        <li><b>S3 Files AP</b>（每 Ticket 一个）：对话记录 JSONL、inbox、state、<code>repo.bundle</code></li>
+        <li>每轮结束做 checkpoint：未提交改动写入 <code>refs/dshsa/wip</code>，增量打包到 bundle</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>换 microVM 后续做</h3>
+      <ul class="dots small aws">
+        <li>同一会话 id 上的下一次调用会拿到新 microVM，挂载同一个 AP</li>
+        <li>从 GitHub 部分克隆，再从 bundle 恢复分支和未提交改动</li>
+        <li>Agent SDK 用同一份对话记录 resume</li>
+        <li>最多丢失上次 checkpoint 之后的未提交编辑</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card tint-soft" style="margin-top:14px">
+    <p class="small"><b>worker-api</b>（私有 API GW）：<code>/v1/events</code> 回传 ack / report / handback / thread.follow 等事件，进入 cell 队列；<code>/v1/read</code> 只读本仓库与已绑定飞书群；<code>/v1/credentials/github</code> 签发 ≤1 小时的仓库 installation token；<code>/v1/token/refresh</code> 仅在 Assignment 运行中续签。</p>
+  </div>
+</section>
+
+<!-- 25 Security -->
+<section class="slide">
+  <div class="kicker aws">安全</div>
+  <h2>安全模型：worker 按不可信处理</h2>
+  <table style="margin-top:10px">
+    <thead><tr><th style="width:150px">层</th><th>机制</th></tr></thead>
+    <tbody>
+      <tr><td>Runtime 入口</td><td>AgentCore 入站认证为 IAM；只有 host task 角色有 <code>InvokeAgentRuntime</code>；无人拥有 <code>InvokeAgentRuntimeCommand</code></td></tr>
+      <tr><td>Ticket 身份</td><td>KMS 非对称密钥签发的 ES256 ticket token，含 tenant / cell / ticket / assignment / session，有效期 ≤2 小时；只有 cell 签发</td></tr>
+      <tr><td>存储</td><td>每 Ticket 一个 S3 Files access point；挂载凭证的 session policy 限定该 AP；执行角色本身没有 S3 / S3 Files 权限</td></tr>
+      <tr><td>VM 内</td><td>gateway root、agent uid 1000 + NoNewPrivs；一个 VM 绑定第一个 token 的 ticketKey</td></tr>
+      <tr><td>worker 出口</td><td>worker-api 为私有 AWS_IAM API（runtime 角色 + VPC endpoint 条件）且要求 ticket token；访问范围取自 token，不取自请求</td></tr>
+      <tr><td>面板</td><td>Cognito JWT，按 <code>cognito:groups</code> 校验 tenant 归属后转发到内部 HTTP</td></tr>
+      <tr><td>入口</td><td>GitHub webhook HMAC 校验（密钥在 Secrets Manager）+ API GW 限流；飞书走长连接，不需要公网入口</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted" style="margin-top:12px">提示词层：所有消息、引用和仓库文件都按不可信数据处理；转发的指令不构成授权；Thread 上下文不能覆盖名单、规则和明确的 stop。</p>
+</section>
+
+<!-- 26 Reliability -->
+<section class="slide">
+  <div class="kicker aws">可靠性</div>
+  <h2>可靠性：确定性 id、持久化副作用、幂等</h2>
+  <div class="grid2 fill" style="align-content:start;margin-top:10px">
+    <div class="card">
+      <h3>Effects 队列（outbox 模式）</h3>
+      <p class="small">Engine 在同一个 SQLite 事务里写状态和"要做的外部动作"，提交后由后台按行执行，成功才删除。</p>
+      <table class="compact" style="margin-top:8px">
+        <tr><th>kind</th><th>动作</th></tr>
+        <tr><td><code>assessment</code></td><td>一次 Bedrock 判断</td></tr>
+        <tr><td><code>compose</code></td><td>为报告写回复</td></tr>
+        <tr><td><code>launch</code> / <code>delivery</code> / <code>stop</code></td><td>启动、投递、停止 worker</td></tr>
+        <tr><td><code>reply</code></td><td>发 GitHub / 飞书消息</td></tr>
+      </table>
+      <p class="small muted" style="margin-top:8px">按 (kind, key) 合并；指数退避重试；按 kind 限并发；暂停时原地等待；随 cell 的 SQLite 一起迁移。</p>
+    </div>
+    <div class="col">
+      <div class="card"><h3>确定性 id</h3><p class="small">Trigger id 由来源 id 哈希；Eval id 由 Thread、Policy 版本、时间和批内 Trigger 哈希；Ticket id = <code>hash('ticket', evalId)</code>。webhook、补拉、重放产生的重复在入库时合并。</p></div>
+      <div class="card"><h3>多层去重</h3><p class="small">SQS FIFO 按 envelope id 去重；worker 事件按 uuid 去重（跨重试和重启不变）；worker 端 <code>deliver</code> 按 input id 去重；<code>start</code> 按 assignmentId 幂等。</p></div>
+      <div class="card"><h3>超时与失败</h3><p class="small">Eval 超时重新排队，连续两次重试后第三次超时记 <code>unavailable</code>；面板只对 24 小时内、仍是最新且未处理的 unavailable 提示人工。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 27 Key flows -->
+<section class="slide">
+  <div class="kicker aws">关键流程</div>
+  <h2>四条关键流程</h2>
+  <div class="col fill" style="gap:12px;margin-top:10px">
+    <div class="card"><h3><span class="tag amber">1</span>被 @ → 开 Ticket</h3><p class="small">webhook / 长连接 → 路由 → cell 队列 → 规范化 → Engine.receive → 闸门 → Assessor（Bedrock）→ accept → Effects：provisioner 建 AP → 签发 token → <code>InvokeAgentRuntime start</code> → worker <code>ack</code> → Outbox 发确认</p></div>
+    <div class="card"><h3><span class="tag amber">2</span>后续追问</h3><p class="small">Trigger 按订阅分发到 Ticket → Executor.deliver → <code>InvokeAgentRuntime deliver</code>（新 token）→ worker 回 <code>inputs.read</code>。不经过任何模型判断。</p></div>
+    <div class="card"><h3><span class="tag amber">3</span>microVM 丢失后续做</h3><p class="small">在同一 runtimeSessionId 上 deliver / start → AgentCore 拉起新 VM → gateway 挂载同一 AP → agent 从 <code>/mnt/work/.claude</code> 与 <code>state.json</code> 恢复，仓库从 bundle 恢复。</p></div>
+    <div class="card"><h3><span class="tag amber">4</span>报告与回复</h3><p class="small">worker <code>report ready</code> → worker-api → cell 队列 → Engine.report → Replier（Bedrock）写回复 → reply 闸门 → Outbox → GitHub / 飞书。</p></div>
+  </div>
+</section>
+
+<!-- 28 Operations -->
+<section class="slide">
+  <div class="kicker aws">运营</div>
+  <h2>运营与可观测</h2>
+  <p class="lede">原型可以在对话里让 router 改设置、查状态；AWS 实现把这些操作统一放到面板，按 tenant 鉴权。</p>
+  <div class="grid3 fill" style="align-content:start">
+    <div class="card">
+      <h3>面板操作</h3>
+      <ul class="dots small aws">
+        <li>Settings：名单、准入表、规则、接受模式、模型、worker 类型</li>
+        <li>Stop / Retry：停止 Ticket、重新评估</li>
+        <li>Pause：暂停处理，Effects 原地等待</li>
+        <li>飞书群绑定到 cell</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>可见性</h3>
+      <ul class="dots small aws">
+        <li>每条 Decision 及理由、would_accept 记录</li>
+        <li>"最近被忽略"列表与 <code>decision ignored</code> 日志</li>
+        <li>Ticket 状态与 worker 对话记录（经 S3 Files 导出，约 1 分钟延迟）</li>
+        <li>各 Effects kind 的健康状态（连续失败 3 次标红）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>主动能力的推荐放开路径</h3>
+      <ul class="dots small aws">
+        <li>先用短名单，只接明确请求</li>
+        <li>打开接收范围 + <code>observe</code>，审阅 would_accept</li>
+        <li>收紧规则文本，直到判断符合预期</li>
+        <li>切到 <code>auto</code>；噪音大时缩短规则或暂停</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 29 Divider compare -->
+<section class="slide divider">
+  <div class="num" style="color:#f1d6b3">05</div>
+  <h2>对比与取舍</h2>
+  <p>同一套领域内核和提示词，运行时形态不同带来的差异。</p>
+</section>
+
+<!-- 30 Comparison -->
+<section class="slide">
+  <div class="kicker">对比</div>
+  <h2>原型与 AWS 实现</h2>
+  <table class="compact" style="margin-top:8px">
+    <thead><tr><th style="width:150px">方面</th><th>原型（DSH）</th><th>AWS on AgentCore</th></tr></thead>
+    <tbody>
+      <tr><td>判断者</td><td>一个长期存在的 main Session（router）</td><td>每个 Eval 一次无状态 Bedrock 调用（Assessor）</td></tr>
+      <tr><td>回复者</td><td>同一个 router</td><td>每份报告一次无状态调用（Replier）</td></tr>
+      <tr><td>范围</td><td>一个部署对应一个仓库</td><td>多租户；每个 (tenant, repo) 一个隔离 cell</td></tr>
+      <tr><td>提示词 / 工具</td><td><code>dispatch.md</code>、<code>admission.md</code>…</td><td>同一套提示词 + 无状态说明；工具同名同 schema</td></tr>
+      <tr><td>决策执行</td><td>DSH core Engine</td><td>同一个 Engine（原样复用）</td></tr>
+      <tr><td>上下文来源</td><td>对话历史 + 卡片 + notice + 按需读取</td><td>每次现拼一张卡片，不能再读</td></tr>
+      <tr><td>上下文增长</td><td>持续增长，依赖 Harness 压缩</td><td>不增长，每次有上限</td></tr>
+      <tr><td>主动评估窗口</td><td>前 5 条 + 前后各 5 条，可展开、可读图</td><td>最近 20 条，一次给全</td></tr>
+      <tr><td>批量</td><td>一次调用最多决定 20 个候选</td><td>一次调用决定一个 Eval</td></tr>
+      <tr><td>故障影响</td><td>router 卡住时所有候选都要等</td><td>只影响单个 Eval</td></tr>
+      <tr><td>管理操作</td><td>可在对话里让 router 改设置、发 note</td><td>只在面板</td></tr>
+      <tr><td>worker</td><td>本机 Harness 会话，共享主机</td><td>AgentCore Runtime 会话 + 每 Ticket 一个 S3 Files AP，ticket token 鉴权</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 31 Tradeoffs -->
+<section class="slide">
+  <div class="kicker">取舍</div>
+  <h2>得到的与失去的</h2>
+  <div class="grid2 fill" style="align-content:start;margin-top:10px">
+    <div class="card tint-teal">
+      <h3>得到的</h3>
+      <ul class="dots small">
+        <li><b>可复现</b>：每次判断的输入是一张固定卡片，便于审计和回归测试</li>
+        <li><b>无上下文膨胀</b>：没有压缩带来的遗忘与重复派活</li>
+        <li><b>横向扩展</b>：cell 之间互不影响，host 可多实例</li>
+        <li><b>故障隔离</b>：一个候选失败不拖住其他候选</li>
+        <li><b>成本可控</b>：system 前缀走 prompt cache，Policy 段在 cache 点之后</li>
+        <li><b>执行隔离</b>：worker 在独立 microVM，按 Ticket 限定存储与凭证</li>
+      </ul>
+    </div>
+    <div class="card tint-red">
+      <h3>失去的 / 已知限制</h3>
+      <ul class="dots small">
+        <li><b>按需查资料</b>：卡片外的 Ticket、Decision、Thread 细节仍读不到。暂不加只读工具循环，因为：每查一轮多一次模型调用，延迟和 token 叠加；模型主动读更多他人原文，提示注入面变大；判断输入不再只是一张卡片，复现和审计变弱。先从 eval 日志找出因信息不足而判错的实例，再决定是否做</li>
+        <li><b>对话式管理</b>：改设置、发 note、查 worker 状态在面板完成</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 32 Pattern -->
+<section class="slide">
+  <div class="kicker">模式抽象</div>
+  <h2>可复用的组成部分</h2>
+  <p class="lede">dsh-superagent 面向代码仓库，但其结构本身与领域无关。把被动 chat agent 改造成主动 agent，涉及的是这几层：</p>
+  <table>
+    <thead><tr><th style="width:170px">层</th><th>dsh-superagent 中的实现</th><th style="width:330px">泛化含义</th></tr></thead>
+    <tbody>
+      <tr><td>事件接入</td><td>Source：GitHub webhook、飞书长连接；确定性 Trigger id</td><td>任意事件源，规范化为统一消息并幂等入库</td></tr>
+      <tr><td>对话归属</td><td>Thread（Issue/PR、回复串）+ Subscription</td><td>把事件归入"一件事"，已在处理的事直接路由</td></tr>
+      <tr><td>准入</td><td>名单、准入表、强度、接受模式</td><td>确定性代码决定谁能触发、触发到什么程度</td></tr>
+      <tr><td>判断</td><td>Eval：路由提示词 + 主动评估提示词 + 自然语言规则</td><td>LLM 只回答"要不要做、归谁"，输出结构化且带证据</td></tr>
+      <tr><td>执行</td><td>Ticket + Mandate + 隔离 worker</td><td>判断与执行分离；执行单元有边界、可恢复、可退回</td></tr>
+      <tr><td>表达</td><td>ack / report / reply 闸门</td><td>只在需要人行动或结果可用时输出</td></tr>
+      <tr><td>治理</td><td>Decision 审计、observe → auto、Policy 版本</td><td>主动能力分阶段放开，每次判断可追溯</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 33 Summary -->
+<section class="slide">
+  <div class="kicker">小结</div>
+  <h2>要点</h2>
+  <div class="col fill" style="justify-content:center;gap:16px">
+    <div class="card tint-blue"><p><b>主动 ≠ 每条都回。</b>主动 agent 的大部分判断结论是"不做"；系统的价值在于判断是否准确，以及判断的依据是否可审计。</p></div>
+    <div class="card tint-violet"><p><b>确定性代码管边界，LLM 管语义判断。</b>名单、准入、订阅、去重、重试都由代码完成；模型只做 Eval、执行和回复措辞，并以结构化工具输出。</p></div>
+    <div class="card tint-teal"><p><b>判断与执行分离。</b>判断者只看摘要卡片，不读代码；worker 回到原始消息自行理解需求，范围外的退回。</p></div>
+    <div class="card tint-amber"><p><b>AWS 实现保留内核，替换运行时。</b>Engine、提示词、工具 schema 原样复用；cell 单写者 + Litestream、无状态 Bedrock 判断、每 Ticket 一个 AgentCore Runtime 会话与 S3 Files AP。</p></div>
+  </div>
+</section>
+
+</div></div>
+
+<div id="hint">← → 翻页 · F 全屏 · 打印可导出 PDF</div>
+<div id="nav">
+  <button id="prev" aria-label="上一页">← 上一页</button>
+  <button id="next" aria-label="下一页">下一页 →</button>
+</div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var deck = document.getElementById('deck');
+  var bar = document.getElementById('progress');
+  slides.forEach(function (s, i) { s.setAttribute('data-n', (i + 1) + ' / ' + slides.length); });
+  var cur = 0;
+  function fit() {
+    var k = Math.min(window.innerWidth / 1320, window.innerHeight / 760);
+    deck.style.transform = 'scale(' + k + ')';
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === cur); });
+    bar.style.width = ((cur + 1) / slides.length * 100) + '%';
+    if (location.hash !== '#' + (cur + 1)) history.replaceState(null, '', '#' + (cur + 1));
+  }
+  document.getElementById('prev').onclick = function () { show(cur - 1); };
+  document.getElementById('next').onclick = function () { show(cur + 1); };
+  document.addEventListener('keydown', function (e) {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].indexOf(e.key) >= 0) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].indexOf(e.key) >= 0) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      else document.exitFullscreen && document.exitFullscreen();
+    }
+  });
+  window.addEventListener('resize', fit);
+  window.addEventListener('hashchange', function () { var n = parseInt(location.hash.slice(1), 10); if (n) show(n - 1); });
+  fit();
+  var start = parseInt(location.hash.slice(1), 10);
+  show(start ? start - 1 : 0);
+})();
+</script>
+</body>
+</html>
