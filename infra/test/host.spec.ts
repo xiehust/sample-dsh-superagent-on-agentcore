@@ -1,13 +1,14 @@
-import { App, Aspects } from 'aws-cdk-lib'
+import { Aspects } from 'aws-cdk-lib'
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions'
 import { AwsSolutionsChecks } from 'cdk-nag'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ACCOUNT, compose } from '../lib/compose.ts'
+import { testApp } from './test-app.ts'
 
 let host: Template
 let annotations: Annotations
 beforeAll(async () => {
-  const app = new App({ context: { '@aws-cdk/core:defaultCrossStackReferences': 'strong' } })
+  const app = testApp()
   const stacks = await compose(app, { account: ACCOUNT })
   Aspects.of(app).add(new AwsSolutionsChecks())
   app.synth()
@@ -54,6 +55,22 @@ describe('dshsa-host', () => {
     const version = statements.find(statement => statement.Sid === 'WorkerVersionRead')!
     expect(version.Action).toBe('ssm:GetParameter')
     expect(JSON.stringify(version.Resource)).toContain(':parameter/dshsa-worker/version')
+    // v7: both worker runtimes (invoke and stop), both version parameters, and the Codex runtime ARN for the cell.
+    const invoke = statements.find(statement => statement.Sid === 'InvokeWorkerRuntime')!
+    for (const s of [invoke, stop]) {
+      const resources = JSON.stringify(s.Resource)
+      expect(resources).toContain('WorkerRuntime')
+      expect(resources).toContain('WorkerCodexRuntime')
+      expect((s.Resource as unknown[]).length).toBe(4)  // each runtime and its endpoints
+    }
+    expect(JSON.stringify(version.Resource)).toContain(':parameter/dshsa-worker-codex/version')
+    const env = JSON.stringify(host.findResources('AWS::ECS::TaskDefinition'))
+    expect(env).toContain('"RUNTIME_ARN_CODEX"')
+    // Assessor/replier models: Anthropic and OpenAI profiles/models plus the default project (GPT-6 on Converse).
+    const models = JSON.stringify(statements.find(statement => statement.Sid === 'BedrockModels')!.Resource)
+    for (const arn of [':inference-profile/global.openai.*', 'arn:aws:bedrock:*::foundation-model/openai.*', 'arn:aws:bedrock:::foundation-model/openai.*',
+      ':project/default', ':inference-profile/global.anthropic.*', 'foundation-model/anthropic.*'])
+      expect(models).toContain(arn)
     // v6 onboarding: one item read on dshsa-onboarding, nothing more.
     const claims = statements.find(statement => statement.Sid === 'OnboardingClaimRead')!
     expect(claims.Action).toBe('dynamodb:GetItem')

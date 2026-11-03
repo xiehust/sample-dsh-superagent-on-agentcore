@@ -19,3 +19,7 @@ infra/cdk.context.json
 # Internal agent workflow, task notes and personal journals.
 /.trellis/
 /.kiro/
+
+# Panel UI acceptance output (pnpm e2e)
+/packages/panel/tests/e2e/results/
+/packages/panel/tests/e2e/screenshots/

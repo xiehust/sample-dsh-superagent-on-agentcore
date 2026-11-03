@@ -5,7 +5,7 @@
  * against fakes.
  */
 import { join } from 'node:path'
-import { CellEnvelope, HOST_LEASE_PREFIX, StateKeys, leaseKey, type CellRecord, type ConnectorFactory, type ConnectorKv, type FeishuSecrets, type Logger,
+import { CellEnvelope, HOST_LEASE_PREFIX, WORKER_TYPES, type WorkerType, StateKeys, leaseKey, type CellRecord, type ConnectorFactory, type ConnectorKv, type FeishuSecrets, type Logger,
   type TenantRecord, type TicketTokenSigner } from '@dshsa/contracts'
 import type { CellInfo, SourceApis, SourceKind } from '@dshsa/core/host'
 import { CellRuntime, type CellParts } from './cell.ts'
@@ -50,6 +50,9 @@ export interface HostDeps {
   provisioner: Provisioner
   /** The worker version the runtime serves now (SSM, contracts `WorkerVersion`); absent in local mode, where no session is stopped. */
   workerVersion?: () => Promise<string | undefined>
+  /** v7: extra worker runtimes by type (`runtime` stays the Claude one) and their served versions. */
+  runtimes?: Partial<Record<WorkerType, WorkerRuntime>>
+  workerVersions?: Partial<Record<WorkerType, () => Promise<string | undefined>>>
   tokens: TicketTokens & TicketTokenSigner
   model: ModelClient
   /** The tenant's Feishu Connector and what it needs; absent when connectors are not hosted (local mode). */
@@ -134,10 +137,11 @@ export class HostProcess implements ServedCells {
     const dbPath = join(deps.dataDir, 'cells', cellId, 'orchestrator.sqlite')
     const replica = deps.stateBucket ? `s3://${deps.stateBucket}/${record.stateBucketPrefix || StateKeys.litestream(cellId)}` : undefined
     if (replica) await deps.replicator.restore(dbPath, replica, token.signal)
+    const runtimes: Partial<Record<WorkerType, WorkerRuntime>> = { claude: deps.runtime, ...deps.runtimes }
+    const workerVersions = { ...deps.workerVersion ? { claude: deps.workerVersion } : {}, ...deps.workerVersions }
     const runtime: CellRuntime = new CellRuntime({ cell: sources.cell, apis: sources.apis, dbPath, kinds: sources.kinds, lease: token, log: deps.log,
-      tokens: deps.tokens, stateDir: join(deps.dataDir, 'cells', cellId),
-      executor: parts => new AgentCoreExecutor(parts, { runtime: deps.runtime, provisioner: deps.provisioner, tokens: deps.tokens,
-        ...deps.workerVersion ? { workerVersion: deps.workerVersion } : {} }),
+      tokens: deps.tokens, stateDir: join(deps.dataDir, 'cells', cellId), workerTypes: WORKER_TYPES.filter(type => runtimes[type]),
+      executor: parts => new AgentCoreExecutor(parts, { runtimes, workerVersions, provisioner: deps.provisioner, tokens: deps.tokens }),
       assessor: parts => new StatelessAssessor(parts, { model: deps.model }),
       replier: parts => new Replier(parts, { model: deps.model }),
       ...sources.onEvent ? { onEvent: sources.onEvent } : {},

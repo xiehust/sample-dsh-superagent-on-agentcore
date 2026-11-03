@@ -15,7 +15,8 @@ import type { Api, ApiRequest, ApiResponse, CellListView, CellView, ChatBinding,
  */
 export const CELL_ROUTES = ['GET state', 'GET overview', 'GET tickets', 'GET tickets/:id', 'POST tickets/:id/retry', 'POST tickets/:id/stop',
   'POST executor/pause', 'POST triggers/:id/requeue', 'GET decisions', 'POST decisions/:id/dismiss', 'GET settings', 'PUT settings/:block', 'GET prompts',
-  'PUT prompts', 'POST policy-sync/:id', 'GET sources/feishu/members', 'GET sources/github/collaborators'] as const satisfies readonly (keyof Api)[]
+  'PUT prompts', 'POST policy-sync/:id', 'GET sources/feishu/members', 'GET sources/github/collaborators', 'GET models'] as const satisfies
+  readonly (keyof Api)[]
 export type CellRoute = typeof CELL_ROUTES[number]
 export type CellApi = Pick<Api, CellRoute>
 export type CellRequest<K extends CellRoute> = ApiRequest<K>
@@ -25,7 +26,9 @@ export type ErrorKind = 'unauthorized' | 'forbidden' | 'offline' | 'conflict' | 
 /** A failed panel-api request: HTTP `status` (0 when unreachable), the server `code`, and a user-facing `message`. */
 export class ApiError extends Error {
   /** `issues` are a cell's per-field validation errors on a 400 (`{path, message}`, path dotted). */
-  constructor(readonly status: number, readonly code: string, message: string, readonly issues: Issue[] = []) { super(message) }
+  /** `values` are a cell refusal's details (`UserError` values, e.g. `{block, field, reason}` of `modelUnavailable`). */
+  constructor(readonly status: number, readonly code: string, message: string, readonly issues: Issue[] = [],
+    readonly values: Record<string, string> = {}) { super(message) }
   get kind(): ErrorKind {
     if (this.status === 401) return 'unauthorized'
     if (this.status === 403) return 'forbidden'
@@ -132,7 +135,7 @@ export function createClient(options: ClientOptions): Client {
     let value: unknown
     try { value = text ? JSON.parse(text) : {} } catch { value = undefined }
     if (!response.ok) {
-      const failure = (value ?? {}) as { error?: unknown; code?: unknown; message?: unknown; issues?: unknown }
+      const failure = (value ?? {}) as { error?: unknown; code?: unknown; message?: unknown; issues?: unknown; values?: unknown }
       // panel-api errors are `{error: code, message}`; forwarded DSH host errors are `{error: message, code?}`.
       const code = typeof failure.code === 'string' ? failure.code : typeof failure.error === 'string' && /^[a-z_]+$/.test(failure.error)
         ? failure.error : `http_${response.status}`
@@ -142,7 +145,9 @@ export function createClient(options: ClientOptions): Client {
       const issues = Array.isArray(failure.issues) ? failure.issues.flatMap(item => item && typeof item === 'object'
         && typeof (item as Issue).path === 'string' && typeof (item as Issue).message === 'string'
         ? [{ path: (item as Issue).path, message: (item as Issue).message }] : []) : []
-      throw new ApiError(response.status, code, message, issues)
+      const values = failure.values && typeof failure.values === 'object' && !Array.isArray(failure.values)
+        ? Object.fromEntries(Object.entries(failure.values).filter((entry): entry is [string, string] => typeof entry[1] === 'string')) : {}
+      throw new ApiError(response.status, code, message, issues, values)
     }
     return value as T
   }

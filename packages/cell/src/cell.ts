@@ -30,7 +30,7 @@ import { CodedError, cellRoutes, type HttpHost, type Routes } from './app/http.t
 import { z } from 'zod'
 import { ticketEnvironment } from './app/execution-environment.ts'
 import { runningAssignment } from './core/index.ts'
-import { Models, ticketKey, runtimeSessionId } from '@dshsa/contracts'
+import { DEFAULT_MODELS, MODEL_CATALOG, WORKER_TYPES, WORKER_TYPE_LABELS, ticketKey, runtimeSessionId, type WorkerType } from '@dshsa/contracts'
 import type { TicketTokenSigner } from '@dshsa/contracts'
 import type { LeaseToken } from './lease.ts'
 
@@ -77,6 +77,8 @@ export interface CellOptions {
   tokens?: TicketTokenSigner
   /** The cell's working directory, shown as the state directory in the panel. */
   stateDir?: string
+  /** dshsa v7: worker types this host has an AgentCore runtime for (default: claude only). */
+  workerTypes?: readonly WorkerType[]
 }
 
 export class StaleFence extends Error {}
@@ -143,6 +145,7 @@ export class CellRuntime {
       const lifetime = this.parts.lifetime
       this.settings = new Settings({ store, sources, engine: { policyChanged: (from, to, effects) => { this.engine.policyChanged(from, to, effects) } }, health: board,
         lifetime, sessions: this.sessions, sourceHost: { sources, context: kind => this.context(kind) }, requestPass: () => { this.passes.request() },
+        workerTypes: () => this.workerTypes(),
         setup: { configured: holding, checkAccounts: async () => {}, blockCommands: async () => {}, restart: () => {} } })
       this.workerEvents = new WorkerEvents({ store, engine: this.engine, cellId: options.cell.cellId, log: options.log,
         reported: (ticket, report) => { this.replier?.reported(ticket, report) },
@@ -231,9 +234,12 @@ export class CellRuntime {
       links: () => channel => sources.link(channel, { repository: this.options.cell.repository, ...this.options.cell.feishu ? { feishu: this.options.cell.feishu } : {} }),
       ticketEnvironment: ticket => ticketEnvironment({ cell: this.options.cell, sources, settings: store.settings(), ticket }),
       checkSetup: () => {}, requestPass: () => { this.passes.request() },
-      models: async () => ({ models: [{ id: Models.eval, roles: ['eval'] }, { id: Models.worker, roles: ['executor'] }] }),
+      models: async () => ({ models: MODEL_CATALOG, defaults: DEFAULT_MODELS,
+        workerTypes: WORKER_TYPES.map(id => ({ id, label: WORKER_TYPE_LABELS[id], available: this.workerTypes().includes(id) })) }),
       pickers: { feishuMembers: chat => this.feishuMembers(chat), githubCollaborators: () => this.githubCollaborators() } }
   }
+  /** dshsa v7: the worker types new tickets may use here (`GET models`, settings validation). */
+  workerTypes(): readonly WorkerType[] { return this.options.workerTypes ?? ['claude'] }
   /** The people of a chat bound to this cell (design onboarding §5): a chat the cell is not bound to is refused, whatever the bot sees. */
   async feishuMembers(chat: string): Promise<{ id: string; name: string }[]> {
     if (!/^oc_[A-Za-z0-9]+$/.test(chat)) throw new CodedError(400, 'bad_request', 'chat must be a Feishu chat id (oc_…)')

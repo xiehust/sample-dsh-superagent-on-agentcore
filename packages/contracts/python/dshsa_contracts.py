@@ -136,6 +136,8 @@ INVOCATION_ERRORS = ("unauthorized", "bound_to_other_ticket", "mount_failed", "b
 WORKER_VERSION_FIELD = "workerVersion"
 WORKER_VERSION_ENV = "DSHSA_WORKER_VERSION"
 WORKER_VERSION_PARAMETER = "/dshsa-worker/version"
+# v7: per worker type (WorkerVersion.parameters); WORKER_VERSION_PARAMETER is the claude one.
+WORKER_VERSION_PARAMETERS = {"claude": "/dshsa-worker/version", "codex": "/dshsa-worker-codex/version"}
 
 
 def _versioned(response: dict[str, Any], worker_version: str | None) -> dict[str, Any]:
@@ -162,6 +164,12 @@ def validate_invocation(req: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("bad ticket")
     if req["action"] in ("start", "deliver") and not isinstance(req.get("config"), dict):
         raise ValueError("config is required for start/deliver")
+    cfg = req.get("config")
+    if isinstance(cfg, dict):
+        # v7: type checks only; a worker drops (and logs) an effort it doesn't know, never bad_request.
+        for key in ("effort", "agent"):
+            if key in cfg and cfg[key] is not None and (not isinstance(cfg[key], str) or not cfg[key]):
+                raise ValueError(f"config.{key} must be a non-empty string")
     req.setdefault("inputs", [])
     return req
 
@@ -182,3 +190,58 @@ _SDK_NS = _uuid.UUID("6f1d6c5e-3a0b-5d1e-9f4a-64736873612d")  # fixed namespace 
 def sdk_session_id(tkey: str) -> str:
     """Deterministic Claude Agent SDK session id for a ticket (spike S2): uuid5(ns, "dshsa/" + ticketKey)."""
     return str(_uuid.uuid5(_SDK_NS, "dshsa/" + tkey))
+
+
+# ---- v7 model catalog (models.ts; tests/vectors.json "models" is the shared oracle)
+WORKER_TYPES = ("claude", "codex")
+EFFORTS = ("none", "low", "medium", "high", "xhigh", "max")
+_CLAUDE = ["low", "medium", "high", "xhigh", "max"]
+_GPT = ["none", "low", "medium", "high", "xhigh", "max"]
+_CODEX = ["low", "medium", "high", "xhigh", "max"]  # codex 0.166.0 turn/start.effort without `ultra` (sub-agents)
+MODEL_CATALOG: list[dict[str, Any]] = [
+    {"id": "global.anthropic.claude-opus-5-5", "label": "Claude Opus 5.5", "family": "anthropic", "tier": "large",
+     "surfaces": {"claude-worker": {"efforts": _CLAUDE}}},
+    {"id": "global.anthropic.claude-sonnet-5-5", "label": "Claude Sonnet 5.5", "family": "anthropic", "tier": "medium",
+     "surfaces": {"converse": {"efforts": _CLAUDE, "promptCache": True}, "claude-worker": {"efforts": _CLAUDE}}},
+    {"id": "global.anthropic.claude-haiku-5-5", "label": "Claude Haiku 5.5", "family": "anthropic", "tier": "small",
+     "surfaces": {"converse": {"efforts": _CLAUDE, "forceTool": True, "promptCache": True}, "claude-worker": {"efforts": _CLAUDE}}},
+    {"id": "global.openai.gpt-6-astra", "label": "GPT-6 Astra", "family": "openai", "tier": "large",
+     "surfaces": {"codex-worker": {"efforts": _CODEX}}},
+    {"id": "global.openai.gpt-6.1-sol", "label": "GPT-6.1 Sol", "family": "openai", "tier": "large",
+     "surfaces": {"codex-worker": {"efforts": _CODEX}}},
+    {"id": "global.openai.gpt-6.1-terra", "label": "GPT-6.1 Terra", "family": "openai", "tier": "medium",
+     "surfaces": {"converse": {"efforts": _GPT, "forceTool": True, "promptCache": True},
+                  "codex-worker": {"efforts": _CODEX, "defaultEffort": "high"}}},
+    {"id": "global.openai.gpt-6-luna", "label": "GPT-6 Luna", "family": "openai", "tier": "small",
+     "surfaces": {"converse": {"efforts": _GPT, "defaultEffort": "low", "forceTool": True, "promptCache": False}}},
+]
+DEFAULT_MODELS = {"eval": "global.openai.gpt-6-luna", "reply": "global.openai.gpt-6-luna",
+                  "worker": {"claude": "global.anthropic.claude-opus-5-5", "codex": "global.openai.gpt-6.1-terra"}}
+
+
+def catalog_model(model_id: str) -> dict[str, Any] | None:
+    return next((m for m in MODEL_CATALOG if m["id"] == model_id), None)
+
+
+def check_model(surface: str, model_id: str, effort: str | None = None) -> str | None:
+    """None when usable, else 'unknownModel' | 'wrongSurface' | 'badEffort' (models.ts checkModel)."""
+    model = catalog_model(model_id)
+    if model is None:
+        return "unknownModel"
+    spec = model["surfaces"].get(surface)
+    if spec is None:
+        return "wrongSurface"
+    if effort is not None and effort not in spec["efforts"]:
+        return "badEffort"
+    return None
+
+
+def worker_effort(worker_type: str, model_id: str, effort: str | None) -> str | None:
+    """The effort a worker passes on: `effort` when its catalog surface accepts it (or the model is outside the catalog),
+    else None (the caller logs the drop). Never raises: an unknown effort is not a reason to refuse work."""
+    if not effort:
+        return None
+    if effort not in EFFORTS:
+        return None
+    spec = (catalog_model(model_id) or {}).get("surfaces", {}).get(f"{worker_type}-worker")
+    return effort if spec is None or effort in spec["efforts"] else None

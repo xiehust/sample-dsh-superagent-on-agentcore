@@ -1,0 +1,68 @@
+# $CODEX_HOME/config.toml for the dshsa Codex worker (codex 0.166.0). Rendered by codex_runner.render_config on every app-server
+# start ({region}, {local} substituted); the agent can write the AP, so it is never trusted from there. The keys that matter are
+# also passed as `-c` overrides (codex_runner.CONFIG_OVERRIDES), which beat this file.
+model_provider = "amazon-bedrock-runtime"
+model = "global.openai.gpt-6.1-terra"
+forced_login_method = "api"
+chatgpt_base_url = "http://127.0.0.1:9"
+check_for_update_on_startup = false
+web_search = "disabled"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+approvals_reviewer = "user"
+sqlite_home = "{local}"
+log_dir = "{local}/log"
+model_reasoning_summary = "none"
+
+[model_providers.amazon-bedrock-runtime.aws]
+region = "{region}"
+
+[analytics]
+enabled = false
+
+[feedback]
+enabled = false
+
+[history]
+persistence = "none"
+
+[otel]
+metrics_exporter = "none"
+
+# Only the cell's skills (and the repo's .agents/skills): no bundled/system skills (skill-installer fetches from GitHub).
+[skills.bundled]
+enabled = false
+
+[features]
+plugins = false
+remote_plugin = false
+plugin_discovery_prefetch = false
+plugin_sharing = false
+apps = false
+memories = false
+multi_agent = false
+multi_agent_v2 = false
+shell_snapshot = false
+daemon_auto_start = false
+# default-on in 0.166.0 (`codex features list`): browsers, computer use, image generation, code mode (its host binary is
+# not shipped), desktop-app features, skill dependency installs and tool suggestions; none belongs in a headless worker.
+browser_use = false
+browser_use_external = false
+browser_use_full_cdp_access = false
+browser_annotation_api = false
+in_app_browser = false
+computer_use = false
+image_generation = false
+code_mode_host = false
+in_app_chat = false
+in_app_dictation = false
+in_app_local_automation = false
+in_app_updates = false
+in_app_voice = false
+bedrock_setup_wizard = false
+skill_mcp_dependency_install = false
+tool_suggest = false
+# The approval reviewer (guardian, model gpt-5.6-luna: not a Bedrock profile id). Approvals are `never` here.
+guardian_approval = false
+# A connection failure must end the turn (the worker retries it 3x, then reports failed), never retry forever.
+unbounded_connection_retries = false

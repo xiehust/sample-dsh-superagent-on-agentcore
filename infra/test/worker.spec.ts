@@ -1,13 +1,14 @@
 /** WorkerModule (owner a8): isolation-relevant properties of dshsa-worker (parent design §5, worker design §7). */
-import { App, Aspects } from 'aws-cdk-lib'
+import { Aspects } from 'aws-cdk-lib'
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions'
 import { AwsSolutionsChecks } from 'cdk-nag'
-import { readFileSync, readdirSync } from 'node:fs'
+import { cpSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { WorkerVersion } from '@dshsa/contracts'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ACCOUNT, compose } from '../lib/compose.ts'
-import { workerImageVersion } from '../lib/constructs/worker.ts'
+import { tempDir, testApp } from './test-app.ts'
+import { CODEX_FLAG, workerImageVersion, workerPaths } from '../lib/constructs/worker.ts'
 
 let worker: Template
 let annotations: Annotations
@@ -22,7 +23,7 @@ const roleStatements = (logicalPrefix: string): Statement[] => {
 }
 
 beforeAll(async () => {
-  const app = new App({ context: { '@aws-cdk/core:defaultCrossStackReferences': 'strong' } })
+  const app = testApp()
   const stacks = await compose(app, { account: ACCOUNT })
   Aspects.of(app).add(new AwsSolutionsChecks())
   assemblyDir = app.synth().directory
@@ -110,18 +111,64 @@ describe('dshsa-worker', () => {
     const version = workerImageVersion()
     expect(version).toMatch(/^[0-9a-f]{16}$/)
     expect(workerImageVersion()).toBe(version) // deterministic, no git or clock input
-    const params = worker.findResources('AWS::SSM::Parameter', { Properties: { Name: WorkerVersion.parameter } })
-    const [param] = Object.values(params) as { Properties: { Value: string; Type: string }; DependsOn?: string[] }[]
-    expect(param?.Properties).toMatchObject({ Value: version, Type: 'String' })
-    const runtimeId = Object.keys(worker.findResources('AWS::BedrockAgentCore::Runtime'))[0]!
-    expect(param?.DependsOn).toContain(runtimeId)
+    const codexVersion = workerImageVersion('codex')
+    expect(codexVersion).toMatch(/^[0-9a-f]{16}$/)
+    expect(codexVersion).not.toBe(version)
+    const runtimes = worker.findResources('AWS::BedrockAgentCore::Runtime') as Record<string, { Properties: { AgentRuntimeName: string } }>
+    const runtimeId = (name: string) => Object.entries(runtimes).find(([, r]) => r.Properties.AgentRuntimeName === name)![0]
+    for (const [name, parameter, value] of [['dshsa_worker', WorkerVersion.parameters.claude, version], ['dshsa_worker_codex', WorkerVersion.parameters.codex, codexVersion]]) {
+      const params = worker.findResources('AWS::SSM::Parameter', { Properties: { Name: parameter } })
+      const [param] = Object.values(params) as { Properties: { Value: string; Type: string }; DependsOn?: string[] }[]
+      expect(param?.Properties).toMatchObject({ Value: value, Type: 'String' })
+      expect(param?.DependsOn).toContain(runtimeId(name!))
+    }
     const manifests = readdirSync(assemblyDir).filter(name => name.endsWith('.assets.json'))
     const images = manifests.flatMap(name => Object.values((JSON.parse(readFileSync(join(assemblyDir, name), 'utf8')) as
-      { dockerImages?: Record<string, { source: { dockerFile?: string; dockerBuildArgs?: Record<string, string> } }> }).dockerImages ?? {}))
+      { dockerImages?: Record<string, { source: { dockerFile?: string; dockerBuildTarget?: string; dockerBuildArgs?: Record<string, string> } }> }).dockerImages ?? {}))
       .filter(image => image.source.dockerFile === 'worker/container/Dockerfile')
-    expect(images.length).toBeGreaterThan(0)
-    for (const image of images) expect(image.source.dockerBuildArgs).toEqual({ [WorkerVersion.env]: version })
+    expect(images.map(image => [image.source.dockerBuildTarget, image.source.dockerBuildArgs]).sort()).toEqual([
+      ['claude', { [WorkerVersion.env]: version }], ['codex', { [WorkerVersion.env]: codexVersion }]])
   })
+
+  it('runs a second runtime for the Codex worker with the same role, network and lifecycle', () => {
+    const runtimes = Object.values(worker.findResources('AWS::BedrockAgentCore::Runtime')) as { Properties: Record<string, unknown> }[]
+    expect(runtimes.map(r => r.Properties.AgentRuntimeName).sort()).toEqual(['dshsa_worker', 'dshsa_worker_codex'])
+    const [a, b] = runtimes.map(r => r.Properties)
+    for (const key of ['RoleArn', 'NetworkConfiguration', 'LifecycleConfiguration', 'EnvironmentVariables', 'PlatformVersion', 'ProtocolConfiguration'])
+      expect(b![key]).toEqual(a![key])
+    expect(JSON.stringify(a!.AgentRuntimeArtifact)).not.toEqual(JSON.stringify(b!.AgentRuntimeArtifact))
+    for (const r of runtimes) expect(r.Properties.AuthorizerConfiguration).toBeUndefined()
+  })
+
+  it('lets the runtime role call the default Bedrock project (GPT-6 Responses API) and nothing of ticket data', () => {
+    const statements = roleStatements('WorkerRuntimeRole')
+    const project = statements.find(s => JSON.stringify(s.Resource).includes(':project/default'))
+    expect(project && actions(project)).toEqual(['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'])
+    for (const s of statements) for (const a of actions(s)) expect(a).not.toMatch(/^(s3|s3files|dynamodb|elasticfilesystem|sts):/)
+  })
+
+  it('versions each image only by its own files: a codex-only change keeps the claude version', () => {
+    const container = join(tempDir('dshsa-container-'), 'container')
+    cpSync(join(workerPaths.WORKER, 'container'), container, { recursive: true, filter: src => !src.includes('__pycache__') })
+    const before = { claude: workerImageVersion('claude', container), codex: workerImageVersion('codex', container) }
+    writeFileSync(join(container, 'codex_runner.py'), '# changed\n')
+    expect(workerImageVersion('claude', container)).toBe(before.claude)
+    expect(workerImageVersion('codex', container)).not.toBe(before.codex)
+    writeFileSync(join(container, 'gateway_core.py'), '# changed\n')
+    expect(workerImageVersion('claude', container)).not.toBe(before.claude)
+  })
+
+  it('omits the Codex runtime and its version parameter with -c dshsa:codexWorker=false', async () => {
+    const app = testApp({ [CODEX_FLAG]: 'false' })
+    const stacks = await compose(app, { account: ACCOUNT })
+    const off = Template.fromStack(stacks.workerStack)
+    const names = Object.values(off.findResources('AWS::BedrockAgentCore::Runtime')).map(r => (r as { Properties: { AgentRuntimeName: string } }).Properties.AgentRuntimeName)
+    expect(names).toEqual(['dshsa_worker'])
+    expect(Object.keys(off.findResources('AWS::SSM::Parameter', { Properties: { Name: WorkerVersion.parameters.codex } }))).toEqual([])
+    const host = JSON.stringify(Template.fromStack(stacks.hostStack).toJSON())
+    expect(host).not.toContain('RUNTIME_ARN_CODEX')
+    expect(host).not.toContain('dshsa-worker-codex/version')
+  }, 300_000)
 
   it('has no unsuppressed cdk-nag errors', () => {
     expect(annotations.findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))).toEqual([])

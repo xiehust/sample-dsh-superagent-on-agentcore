@@ -43,6 +43,8 @@ class Rejected(Exception):
 
 
 VERSION_FILE = "/app/WORKER_VERSION"
+# The agent this image runs (contracts WorkerType); the Codex image target sets DSHSA_AGENT=codex.
+AGENT_TYPE = os.environ.get("DSHSA_AGENT", "claude")
 
 
 def worker_version(path: str = VERSION_FILE) -> str:
@@ -58,8 +60,10 @@ def worker_version(path: str = VERSION_FILE) -> str:
 
 class Gateway:
     def __init__(self, *, verifier: Verifier, mounter: Mounter, agent: AgentClient, store: Store, session_header: Callable[[], str | None] | None = None,
-                 clock: Callable[[], float] = time.time, version: str | None = None, on_cli_started: Callable[[], None] | None = None) -> None:
+                 clock: Callable[[], float] = time.time, version: str | None = None, on_cli_started: Callable[[], None] | None = None,
+                 agent_type: str = AGENT_TYPE) -> None:
         self.verifier, self.mounter, self.agent, self.store, self.clock = verifier, mounter, agent, store, clock
+        self.agent_type = agent_type
         self.on_cli_started = on_cli_started  # once: the agent's first turn has the Claude CLI answering (the pin release)
         self.cli_seen = False
         self.version = version or worker_version()
@@ -132,6 +136,11 @@ class Gateway:
         except Rejected as error:
             log("rejected", code=error.code, reason=str(error))
             return contracts.error_response(error.code, str(error))
+        # Contract v7 §4: a routing bug must not run a ticket on the wrong agent. Authenticated first, before any side effect.
+        agent = (request.get("config") or {}).get("agent")
+        if agent is not None and agent != self.agent_type:
+            log("rejected", code="bad_request", reason=f"agent {str(agent)[:20]} on a {self.agent_type} runtime")
+            return contracts.error_response("bad_request", f"this runtime runs {self.agent_type} workers, not {str(agent)[:20]}")
         action = request["action"]
         if action == "status":
             state = (await self._agent_status()) if self.bound_sub else "idle"

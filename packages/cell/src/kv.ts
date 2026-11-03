@@ -6,6 +6,7 @@ import { family, record, type Family, type Key } from '@dshsa/core/host'
 import type { PromptVersion } from './app/prompts.ts'
 import type { SettingsVersion } from './app/store.ts'
 import type { SettingsSave } from './policy.ts'
+import type { WorkerType } from '@dshsa/contracts'
 
 export { family, record, type Family, type Key }
 export const KV = {
@@ -27,4 +28,6 @@ export const KV = {
   lease: { fence: record<number>('lease-fence') },
   /** dshsa: when a Thread last got a reply to an ignored explicit request (`ignore-hint.ts`), as an ISO time. */
   ignoreHint: family<string, [threadKey: string]>('ignore-hint:'),
+  /** dshsa v7: the worker type a ticket runs on, fixed before its first invoke (contracts `WorkerType`). */
+  workerType: family<WorkerType, [ticketId: string]>('worker-type:'),
 }

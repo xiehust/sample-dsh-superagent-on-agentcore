@@ -140,6 +140,9 @@ export async function main(): Promise<void> {
       } }
   }
   const workerVersion = new SsmWorkerVersion(log)
+  // v7: the Codex worker runtime is optional (infra flag dshsa:codexWorker); without it Codex is not offered.
+  const codexArn = process.env.RUNTIME_ARN_CODEX
+  const codexVersion = codexArn ? new SsmWorkerVersion(log, undefined, undefined, undefined, 'codex') : undefined
   const catalog = new DynamoCatalog(undefined, log)
   const host = new HostProcess({ owner, endpoint: `http://${ip}:${InternalApiPort}`, dataDir: env('DATA_DIR', '/data'), stateBucket,
     maxCells: Number(env('MAX_CELLS', '20')), maxConnectors: Number(env('MAX_CONNECTORS', '5')), log,
@@ -147,6 +150,7 @@ export async function main(): Promise<void> {
     queueFor: record => new SqsCellQueue(record.queueUrl, sqs),
     sourcesFor, runtime: new AgentCoreRuntime(env('RUNTIME_ARN')), provisioner: new LambdaProvisioner(env('PROVISIONER_FUNCTION')),
     workerVersion: () => workerVersion.current(),
+    ...codexArn && codexVersion ? { runtimes: { codex: new AgentCoreRuntime(codexArn) }, workerVersions: { codex: () => codexVersion.current() } } : {},
     tokens: new TicketTokens(new KmsDerSigner(env('TOKEN_KEY_ID'))), model: new BedrockModelClient(),
     connectors: { factory: tenant => createFeishuConnector(tenant), secrets: feishuSecrets,
       kv: tenantId => new S3JsonKv(stateBucket, StateKeys.connectorKv(tenantId)),

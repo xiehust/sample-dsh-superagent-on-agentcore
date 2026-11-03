@@ -31,7 +31,7 @@ describe('StatelessAssessor', () => {
     expect(calls[0]!.system.prefix).not.toContain('## Policy')
     expect(calls[0]!.system.policy).toMatch(/^## Policy/)
     expect(calls[0]!.deadlineMs).toBeGreaterThan(0)
-    expect(calls[0]!.model).toBe('global.anthropic.claude-sonnet-5-5')
+    expect(calls[0]!.model).toBe('global.openai.gpt-6-luna')
     expect(JSON.parse(calls[0]!.prompt)).toMatchObject({ strength: 'explicit', trigger_id: key('chat', '1') })
     const [ticket] = made.cell.store.tickets.list()
     expect(ticket).toMatchObject({ title: 'Rename the Save button', execution: { name: expect.stringMatching(/^rename-save-button-/) } })

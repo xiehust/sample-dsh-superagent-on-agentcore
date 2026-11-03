@@ -121,7 +121,7 @@ describe('policy form', () => {
     expect(screen.getByText(/may start work it infers/)).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Save Eval settings' }))
     await waitFor(() => expect(api.find('PUT', '/v1/cells/acme--gh1/api/settings/eval')[0]?.body)
-      .toEqual({ value: { mode: 'auto', timeoutSeconds: 120, model: null, replyOnIgnore: true }, revision: 1 }))
+      .toEqual({ value: { mode: 'auto', timeoutSeconds: 120, model: null, replyOnIgnore: true, replyModel: null }, revision: 1 }))
   })
 
   it('turns the reply to ignored explicit requests off in the eval block', async () => {
@@ -131,12 +131,12 @@ describe('policy form', () => {
     await user.click(toggle)
     await user.click(screen.getByRole('button', { name: 'Save Eval settings' }))
     await waitFor(() => expect(api.find('PUT', '/v1/cells/acme--gh1/api/settings/eval')[0]?.body)
-      .toEqual({ value: { mode: 'observe', timeoutSeconds: 120, model: null, replyOnIgnore: false }, revision: 1 }))
+      .toEqual({ value: { mode: 'observe', timeoutSeconds: 120, model: null, replyOnIgnore: false, replyModel: null }, revision: 1 }))
   })
 
   it('keeps the JSON editor as the Advanced tab', async () => {
     const { user } = await openForm()
-    await user.click(screen.getByRole('button', { name: 'Advanced (JSON)' }))
+    await user.click(within(screen.getByRole('group', { name: 'Policy editor' })).getByRole('button', { name: 'Advanced (JSON)' }))
     expect(await screen.findByRole('textbox', { name: 'Policy JSON' })).toBeTruthy()
     expect(screen.queryByRole('form', { name: 'Policy form' })).toBeNull()
   })

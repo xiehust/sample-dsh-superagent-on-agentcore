@@ -1,7 +1,7 @@
 /**
  * dshsa: the worker-message helpers of DSH `src/executor/dsh.ts`, copied verbatim (in order) and shared by the AgentCore
  * Executor. Only `ticketExecution` changed: DSH placed the ticket directory under the state directory; here it is the
- * worker's `/mnt/work/repo` inside the ticket's access point.
+ * worker's local working copy `/home/agent/work/repo` (contract v5).
  */
 import { z } from 'zod'
 import { key, threadKey, type AssessmentOutcome, type Execution, type Mandate, type PolicyEffect, type Ticket, type TicketInput,

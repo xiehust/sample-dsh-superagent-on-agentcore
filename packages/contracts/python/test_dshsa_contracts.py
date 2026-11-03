@@ -48,3 +48,30 @@ def test_invocation_responses_match_ts():
         built = c.ok_response(*args, worker_version=version) if kind == "ok" else c.error_response(*args, worker_version=version)
         assert built == case["response"]
     assert c.WORKER_VERSION_PARAMETER.startswith("/dshsa-") and c.WORKER_VERSION_FIELD == "workerVersion"
+
+
+def test_models_match_vectors():
+    m = VECTORS["models"]
+    assert c.MODEL_CATALOG == m["catalog"]
+    assert c.DEFAULT_MODELS == m["defaults"]
+    assert c.WORKER_VERSION_PARAMETERS == m["workerVersionParameters"]
+    assert c.WORKER_VERSION_PARAMETER == c.WORKER_VERSION_PARAMETERS["claude"]
+    for case in m["checkModel"]:
+        assert c.check_model(case["surface"], case["id"], case["effort"]) == case["expect"], case
+
+
+def test_worker_effort_drops_unknown_values():
+    assert c.worker_effort("claude", "global.anthropic.claude-opus-5-5", "max") == "max"
+    assert c.worker_effort("claude", "global.anthropic.claude-opus-5-5", "none") is None
+    assert c.worker_effort("codex", "global.openai.gpt-6.1-terra", "ultra") is None
+    assert c.worker_effort("claude", "us.anthropic.legacy", "high") == "high"
+    assert c.worker_effort("codex", "global.openai.gpt-6-astra", None) is None
+
+
+def test_validate_invocation_type_checks_effort_and_agent():
+    base = {"v": 1, "action": "start", "token": "t", "ticket": {"tenantId": "a", "cellId": "b", "ticketId": "c", "assignmentId": "d"},
+            "config": {"effort": "bogus", "agent": "codex"}}
+    assert c.validate_invocation(dict(base))["config"]["effort"] == "bogus"  # accepted; the worker drops it
+    import pytest
+    with pytest.raises(ValueError):
+        c.validate_invocation({**base, "config": {"effort": 3}})

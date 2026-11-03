@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import type { ConverseCommand } from '@aws-sdk/client-bedrock-runtime'
-import { AssessUnavailable, BedrockModelClient, callTool, modelFor, mustCall, type ModelClient, type Usage } from '../src/index.ts'
+import { AssessUnavailable, BedrockModelClient, callTool, modelChoice, modelFor, mustCall, type ModelClient, type Usage } from '../src/index.ts'
 
 const Decision = z.object({ kind: z.enum(['accept', 'ignore']), reason: z.string().min(1) }).strict()
 const tool = { name: 'orchestrator_route', description: 'Route the candidate.', schema: Decision }
@@ -122,8 +122,59 @@ describe('callTool', () => {
 
 describe('modelFor', () => {
   it('uses the contracts defaults unless the cell names an eval model', () => {
-    expect(modelFor('eval')).toBe('global.anthropic.claude-sonnet-5-5')
-    expect(modelFor('reply', { eval: { model: null } })).toBe('global.anthropic.claude-sonnet-5-5')
+    expect(modelFor('eval')).toBe('global.openai.gpt-6-luna')
+    expect(modelFor('reply', { eval: { model: null } })).toBe('global.openai.gpt-6-luna')
     expect(modelFor('reply', { eval: { model: { model: 'global.anthropic.claude-haiku-5-5' } } })).toBe('global.anthropic.claude-haiku-5-5')
+  })
+})
+
+describe('v7 per-model Converse shape', () => {
+  type Expect = { cache: boolean; choice: unknown; fields: unknown }
+  const cases: [string, string | undefined, Expect][] = [
+    ['global.anthropic.claude-sonnet-5-5', undefined, { cache: true, choice: undefined, fields: undefined }],
+    ['global.anthropic.claude-sonnet-5-5', 'high', { cache: true, choice: undefined, fields: { output_config: { effort: 'high' } } }],
+    ['global.anthropic.claude-haiku-5-5', 'low', { cache: true, choice: { tool: { name: 'orchestrator_route' } }, fields: { output_config: { effort: 'low' } } }],
+    ['global.openai.gpt-6.1-terra', 'medium', { cache: true, choice: { tool: { name: 'orchestrator_route' } }, fields: { reasoning: { effort: 'medium' } } }],
+    ['global.openai.gpt-6-luna', 'none', { cache: false, choice: { tool: { name: 'orchestrator_route' } }, fields: { reasoning: { effort: 'none' } } }],
+    // An effort the model does not list on Converse is not sent; Claude has no `none`.
+    ['global.anthropic.claude-haiku-5-5', 'none', { cache: true, choice: { tool: { name: 'orchestrator_route' } }, fields: undefined }],
+    // A pre-v7 id outside the catalog keeps the pre-v7 request: cache point, no toolChoice, no effort.
+    ['us.anthropic.claude-legacy-v1', 'high', { cache: true, choice: undefined, fields: undefined }],
+  ]
+  it.each(cases)('%s effort=%s', async (model, effort, expected) => {
+    const usage: Usage[] = []
+    const { client, sent } = bedrock([() => answer({ kind: 'ignore', reason: 'x' })])
+    await new BedrockModelClient(client as never, { onUsage: value => usage.push(value) }).call({ ...request, model, ...effort ? { effort } : {} })
+    const input = sent[0]!.command.input
+    expect(input.system).toEqual(expected.cache
+      ? [{ text: 'DSH orchestrator prompt' }, { cachePoint: { type: 'default' } }, { text: '## Policy\nversion v1' }]
+      : [{ text: 'DSH orchestrator prompt' }, { text: '## Policy\nversion v1' }])
+    expect(input.toolConfig?.toolChoice).toEqual(expected.choice)
+    expect(input.additionalModelRequestFields).toEqual(expected.fields)
+    // GPT-6 rejects temperature/topP/stopSequences: never sent for any model.
+    expect(input.inferenceConfig).toEqual({ maxTokens: 4096 })
+    expect(input.messages?.[0]?.content?.[0]?.text).toContain(mustCall('orchestrator_route'))
+    const sentEffort = (expected.fields as { reasoning?: { effort: string }; output_config?: { effort: string } } | undefined)
+    expect(usage[0]!.effort).toBe(sentEffort?.reasoning?.effort ?? sentEffort?.output_config?.effort)
+  })
+  it('keeps the same shape on the corrective turn', async () => {
+    const prose = { output: { message: { role: 'assistant', content: [{ reasoningContent: { redactedContent: new Uint8Array([1]) } }, { text: 'I would ignore it.' }] } }, stopReason: 'end_turn' }
+    const { client, sent } = bedrock([() => prose, () => answer({ kind: 'ignore', reason: 'x' })])
+    await new BedrockModelClient(client as never).call({ ...request, model: 'global.openai.gpt-6-luna', effort: 'low' })
+    const second = sent[1]!.command.input
+    expect(second.additionalModelRequestFields).toEqual({ reasoning: { effort: 'low' } })
+    expect(second.toolConfig?.toolChoice).toEqual({ tool: { name: 'orchestrator_route' } })
+    // Only text blocks are replayed; reasoning blocks never are.
+    expect(second.messages?.[1]).toEqual({ role: 'assistant', content: [{ text: 'I would ignore it.' }] })
+  })
+})
+
+describe('v7 role models', () => {
+  it('defaults both roles to GPT-6 Luna at low; reply falls back to the eval model', () => {
+    expect(modelChoice('eval')).toEqual({ model: 'global.openai.gpt-6-luna', effort: 'low' })
+    expect(modelChoice('reply', { eval: { model: { model: 'global.anthropic.claude-sonnet-5-5' } } })).toEqual({ model: 'global.anthropic.claude-sonnet-5-5' })
+    expect(modelChoice('reply', { eval: { model: { model: 'global.anthropic.claude-sonnet-5-5' }, replyModel: { model: 'global.anthropic.claude-haiku-5-5', reasoningEffort: 'medium' } } }))
+      .toEqual({ model: 'global.anthropic.claude-haiku-5-5', effort: 'medium' })
+    expect(modelFor('eval', { eval: { model: { model: 'us.anthropic.claude-legacy-v1' } } })).toBe('us.anthropic.claude-legacy-v1')
   })
 })

@@ -1,6 +1,6 @@
 /** Read-only Store queries for views, tools, and Source polling. */
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite'
-import type { Decision, Thread, Trigger } from '../core/index.ts'
+import type { Decision, Thread, Ticket, Trigger } from '../core/index.ts'
 import type { Dropped, Receipt, TimelinePlace } from './store.ts'
 
 export function storeReads(db: DatabaseSync) {
@@ -55,6 +55,12 @@ export function storeReads(db: DatabaseSync) {
     const pattern = `%${query.replace(/[\\%_]/g, match => `\\${match}`)}%`
     return db.prepare("SELECT value FROM trigger WHERE id = ? OR json_extract(value, '$.url') LIKE ? ESCAPE '\\' OR json_extract(value, '$.meta.messageId') = ? OR json_extract(value, '$.text') LIKE ? ESCAPE '\\' ORDER BY at DESC LIMIT ?").all(query, `${query.replace(/[\\%_]/g, match => `\\${match}`)}%`, query, pattern, limit).map(row => JSON.parse(String(row.value)) as Trigger)
   },
+  /** Tickets whose `updatedAt` is at or after `since`, most recently updated first, at most `limit` (the assessor card's nearby tickets). */
+  ticketsUpdatedSince: (since: string, limit = 200): Ticket[] => values(`SELECT value FROM ticket WHERE value ->> '$.updatedAt' >= ?
+    ORDER BY value ->> '$.updatedAt' DESC, rowid DESC LIMIT ?`, since, limit),
+  /** Decisions made at or after `since`, newest first, at most `limit` (the assessor card's recent decisions). */
+  decisionsSince: (since: string, limit = 200): Decision[] => values(`SELECT value FROM decision WHERE value ->> '$.at' >= ?
+    ORDER BY value ->> '$.at' DESC, rowid DESC LIMIT ?`, since, limit),
   recentDecisions: (offset = 0, limit = 50): Decision[] => db.prepare('SELECT value FROM decision ORDER BY rowid DESC LIMIT ? OFFSET ?').all(limit, offset).map(row => JSON.parse(String(row.value)) as Decision),
   /** Decisions matching `kinds` whose triggers arrived at or after `since`, aligned with `flow` window counts. */
   decisions: (options: { kinds: string[]; since: string }, offset: number, limit: number): { items: Decision[]; more: boolean } => {

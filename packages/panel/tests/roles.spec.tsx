@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { api, useFakeApi } from './fake-api.ts'
 import { openTab, renderPanel } from './render.tsx'
@@ -78,6 +78,7 @@ describe('members: read plus Stop/Retry', () => {
     expect(screen.getByRole('note').textContent).toContain('Read-only')
     await screen.findByText('Running')
     expect(screen.queryByRole('button', { name: /processing/ })).toBeNull()
+    fireEvent.click(within(await screen.findByRole('group', { name: 'Models editor' })).getByRole('button', { name: 'Advanced (JSON)' }))
     const evalJson = await screen.findByRole('textbox', { name: 'Eval JSON' }) as HTMLTextAreaElement
     expect(evalJson.readOnly).toBe(true)
     expect((screen.getByRole('textbox', { name: 'Prompt config JSON' }) as HTMLTextAreaElement).readOnly).toBe(true)

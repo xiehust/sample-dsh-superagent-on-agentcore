@@ -5,19 +5,24 @@
  * `orchestrator_eval_decide` and mapped through `assessmentOutcome`, exactly as DSH's tools did.
  */
 import { z } from 'zod'
-import { UserError, liveTicket, threadKey, type Assessor, type Candidate, type Ticket, type Trigger } from './core/index.ts'
+import { UserError, threadKey, type Assessor, type Candidate } from './core/index.ts'
+import { cardContext } from './card-context.ts'
 import { assessmentOutcome } from './policy.ts'
 import { checkedImText } from './infra/text.ts'
 import type { CellParts } from './cell.ts'
 import { AssessmentSchema, RouteItemSchema, invalid } from './decisions.ts'
-import { callTool, modelFor, type ModelClient, type SystemPrompt } from '@dshsa/assess'
+import { callTool, modelChoice, type ModelClient, type SystemPrompt } from '@dshsa/assess'
 import { environmentSection, policySection, promptParts } from './app/prompts.ts'
 import { environmentOf } from './app/execution-environment.ts'
 import { triggerMessage } from './executor/messages.ts'
 
 /** What the model is told on top of the DSH main-Session prompt: it is called once, statelessly, and must answer with the tool. */
 const STATELESS = 'You are called once for one candidate, with no conversation history and no other tools: read the card and answer by calling the one tool offered. ' +
-  'Anything the card does not show is unknown; do not invent ticket ids or quotes.'
+  'Anything the card does not show is unknown; do not invent ticket ids or quotes. ' +
+  'orchestrator_read and the other read tools are not available here: beyond this thread, nearby_tickets (recent tickets of the same chat, or of the same GitHub author) ' +
+  'and recent_decisions (this sender\'s recent decisions on other threads) are the only context you get. ' +
+  'You may attach to any ticket the card lists, referenced_tickets and nearby_tickets included, when the message clearly continues it as dispatch says; ' +
+  'a message on a similar subject is still new work.'
 const CONTEXT_MESSAGES = 20
 
 export interface AssessorDeps { model: ModelClient }
@@ -46,11 +51,13 @@ export class StatelessAssessor implements Assessor {
   release(evalId: string): void { this.running.get(evalId)?.abort(); this.running.delete(evalId) }
   dispose(): void { for (const controller of this.running.values()) controller.abort() }
 
-  /** The card the model reads: the candidate's triggers, thread, tickets and (for an inferred one) the thread's recent messages. */
+  /**
+   * The card the model reads: the candidate's triggers and thread, the routing sections DSH's dispatch prompt names
+   * (`related_tickets`, `delivered_to`, `referenced_tickets`, `handed_back`) plus `nearby_tickets` and `recent_decisions`
+   * (see `cardContext`), and for an inferred candidate the thread's recent messages.
+   */
   async card(candidate: Candidate, signal: AbortSignal): Promise<string> {
     const { store, sources, apis } = this.host
-    const ticket = (item: Ticket) => ({ ticket_id: item.id, title: item.title, open: liveTicket(item), strength: item.mandate.strength,
-      ...item.ended ? { ended: item.ended } : {}, report: item.assignments.at(-1)?.report?.summary.slice(0, 300) })
     const triggers = candidate.triggers.map(trigger => triggerMessage(trigger, trigger.url ? { source_url: trigger.url } : {}))
     let context: unknown
     if (candidate.strength === 'inferred') {
@@ -59,11 +66,9 @@ export class StatelessAssessor implements Assessor {
       catch (error) { context = { unavailable: String(error).slice(0, 200) } }
     }
     signal.throwIfAborted()
-    const delivered = (trigger: Trigger) => store.triggers.disposition(trigger.id)
     return JSON.stringify({ eval_id: candidate.evalId, strength: candidate.strength, policy_version: candidate.policyVersion,
       thread: threadKey(candidate.thread.ref), trigger_id: candidate.triggers[0]!.id, triggers,
-      dispositions: Object.fromEntries(candidate.triggers.map(trigger => [trigger.id, delivered(trigger)])),
-      tickets: candidate.tickets.map(ticket), ...context ? { thread_context: context } : {} }, null, 1)
+      ...cardContext(store, sources, candidate), ...context ? { thread_context: context } : {} }, null, 1)
   }
   private async assess(triggerId: string, evalId: string): Promise<void> {
     const { engine, store, log } = this.host
@@ -78,17 +83,17 @@ export class StatelessAssessor implements Assessor {
       // The Bedrock deadline is the Eval's own timeout, so an unanswered call ends as the Eval would.
       const deadlineMs = settings.eval.timeoutSeconds * 1000
       const system = orchestratorSystem(this.host, STATELESS)
-      const model = modelFor('eval', settings)
+      const { model, effort } = modelChoice('eval', settings)
       const card = await this.card(candidate, signal)
       const live = () => engine.candidate(triggerId)?.evalId === evalId && this.host.holding()
       if (candidate.strength === 'explicit') {
-        const item = await callTool(this.deps.model, { model, system, signal, deadlineMs, prompt: card,
+        const item = await callTool(this.deps.model, { model, ...effort ? { effort } : {}, system, signal, deadlineMs, prompt: card,
           tool: { name: 'orchestrator_route', description: 'Route this explicit candidate: accept it as a new ticket, attach it to an existing ticket, stop a ticket on a person\'s stop message, or ignore it, as dispatch says.',
             schema: RouteItemSchema.superRefine((value, ctx) => { const problem = invalid(value); if (problem) ctx.addIssue({ code: 'custom', message: problem }) }) } })
         if (!live()) return
         this.route(candidate, item)
       } else {
-        const assessment = await callTool(this.deps.model, { model, system, signal, deadlineMs, prompt: card,
+        const assessment = await callTool(this.deps.model, { model, ...effort ? { effort } : {}, system, signal, deadlineMs, prompt: card,
           tool: { name: 'orchestrator_eval_decide', description: 'Record the decision of this assessment, as admission describes it.', schema: AssessmentSchema } })
         if (!live()) return
         let outcome = assessmentOutcome(assessment, settings, candidate.strength)

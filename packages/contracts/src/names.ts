@@ -1,4 +1,5 @@
 /** AWS resource names (design §3, §4.2, §4.9). Everything is prefixed `dshsa-`. */
+import { DEFAULT_MODELS } from './models.ts'
 export const PREFIX = 'dshsa'
 export const REGION = 'ap-northeast-1'
 
@@ -53,10 +54,12 @@ export const Secrets = {
 /** v6: CloudWatch log group of panel setup mutations (one AuditEntry per line). */
 export const PanelAuditLogGroup = '/dshsa/panel-admin'
 
+/** Default model per role (v7: derived from `DEFAULT_MODELS` in models.ts; `worker` is the Claude worker's default). */
 export const Models = {
-  eval: 'global.anthropic.claude-sonnet-5-5',
-  reply: 'global.anthropic.claude-sonnet-5-5',
-  worker: 'global.anthropic.claude-opus-5-5',
+  eval: DEFAULT_MODELS.eval,
+  reply: DEFAULT_MODELS.reply,
+  worker: DEFAULT_MODELS.worker.claude,
+  codexWorker: DEFAULT_MODELS.worker.codex,
 } as const
 
 export const WorkerPosix = { uid: 1000, gid: 1000 } as const

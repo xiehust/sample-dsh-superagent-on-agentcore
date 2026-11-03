@@ -1,14 +1,15 @@
 /**
- * Settings: Pause/Resume, the Policy (a form driven by each Source's `policy.fields`, plus the raw JSON), the Eval/Executor
- * blocks and the prompt config as JSON editors with optimistic revisions, and the tenant's Feishu chat bindings (read-only here;
- * Team setup → Chats changes them). Members see everything read-only.
+ * Settings: Pause/Resume, Models (worker type, model and effort; Assessor and Replier; the Eval/Executor JSON under Advanced), the
+ * Policy (a form driven by each Source's `policy.fields`, plus the raw JSON), the prompt config as a JSON editor with optimistic
+ * revisions, and the tenant's Feishu chat bindings (read-only here; Team setup → Chats changes them). Members see everything read-only.
  * Save semantics (`{value, revision}`, 409 on a stale revision, a save bar only while dirty) follow dsh-superagent
  * `src/client/draft.tsx` and `src/client/settings-kit.tsx` (MIT, DeepSeek Harness superagent prototype).
  */
 import { useState, type FormEvent } from 'react'
 import { ApiError, errorText, usePoll } from './api.ts'
+import { ModelsForm } from './models.tsx'
 import { PolicySection } from './policy-form.tsx'
-import type { CellView, PromptConfig } from './types.ts'
+import type { CellView, PromptConfig, SettingsView } from './types.ts'
 import { LoadState, ReadOnlyNote, Section, useAction, usePanel, useShell } from './widgets.tsx'
 
 const pretty = (value: unknown) => JSON.stringify(value, null, 2) ?? ''
@@ -74,25 +75,40 @@ function Processing() {
   </Section>
 }
 
+/** Models (design §6): the form built from `GET models`, or the Eval and Executor blocks as JSON under Advanced. */
+function ModelsSection({ data, reload, save }: {
+  data: SettingsView; reload: () => Promise<void>; save: (block: 'eval' | 'executor') => (value: unknown, revision: number) => Promise<unknown>
+}) {
+  const { canEdit } = usePanel()
+  const [tab, setTab] = useState<'form' | 'json'>('form')
+  return <>
+    <div className="filters" role="group" aria-label="Models editor">
+      <button type="button" className="pill" aria-pressed={tab === 'form'} onClick={() => setTab('form')}>Form</button>
+      <button type="button" className="pill" aria-pressed={tab === 'json'} onClick={() => setTab('json')}>Advanced (JSON)</button>
+    </div>
+    {tab === 'form' ? <ModelsForm settings={data} reload={reload} /> : <>
+      <JsonEditor title="Eval" value={data.blocks.eval.value} revision={data.blocks.eval.revision} reload={reload} save={save('eval')}
+        readOnly={!canEdit} />
+      <JsonEditor title="Executor (model, workers)" value={data.blocks.executor.value} revision={data.blocks.executor.revision}
+        reload={reload} save={save('executor')} readOnly={!canEdit} />
+    </>}
+  </>
+}
+
 function Blocks() {
   const { client, cell, canEdit } = usePanel()
   const { data, error, reload } = usePoll(() => client.call(cell.cellId, 'GET settings'), [cell.cellId])
   const save = (block: 'policy' | 'eval' | 'executor') => (value: unknown, revision: number) =>
     client.call(cell.cellId, 'PUT settings/:block', { block, body: { value, revision } })
   return <>
+    <Section title="Models">
+      <LoadState error={error} loading={!data} />
+      {data && <ModelsSection data={data} reload={reload} save={save} />}
+    </Section>
     <Section title="Policy">
       <LoadState error={error} loading={!data} />
       {data && <PolicySection settings={data} reload={reload} jsonEditor={<JsonEditor title="Policy" value={data.blocks.policy.value}
         revision={data.blocks.policy.revision} reload={reload} save={save('policy')} readOnly={!canEdit} />} />}
-    </Section>
-    <Section title="Configuration">
-      <LoadState error={error} loading={!data} />
-      {data && <>
-        <JsonEditor title="Eval" value={data.blocks.eval.value} revision={data.blocks.eval.revision} reload={reload} save={save('eval')}
-          readOnly={!canEdit} />
-        <JsonEditor title="Executor (model, workers)" value={data.blocks.executor.value} revision={data.blocks.executor.revision}
-          reload={reload} save={save('executor')} readOnly={!canEdit} />
-      </>}
     </Section>
   </>
 }

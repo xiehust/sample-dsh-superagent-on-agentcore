@@ -32,3 +32,12 @@ it('treats a missing or unreadable parameter as unknown, and warns once until it
   m.clock.now = 120_000
   expect(await m.version.current()).toBe('v2')
 })
+
+it('reads the per-type parameter of the Codex worker runtime (v7)', async () => {
+  const names: string[] = []
+  const client = { send: async (command: { input: { Name: string } }) => { names.push(command.input.Name); return { Parameter: { Value: 'c1' } } } } as unknown as SSMClient
+  const version = new SsmWorkerVersion({ debug() {}, info() {}, warn() {}, error() {} }, client, 60_000, () => 0, 'codex')
+  expect(await version.current()).toBe('c1')
+  expect(names).toEqual(['/dshsa-worker-codex/version'])
+  expect(WorkerVersion.parameters.codex).toBe('/dshsa-worker-codex/version')
+})

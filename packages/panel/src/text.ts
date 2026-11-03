@@ -2,7 +2,7 @@
  * English labels and formatting helpers.
  * Labels adapted from dsh-superagent `src/client/locales.ts` and `src/core/reasons.ts` (MIT, DeepSeek Harness superagent prototype).
  */
-import type { Localized, TicketStage } from './types.ts'
+import type { Effort, Localized, TicketStage } from './types.ts'
 
 const REASONS: Record<string, string> = {
   timeout: 'Eval timed out',
@@ -102,3 +102,7 @@ export function claimReasonText(reason: string | undefined, account: string, log
     default: return 'a platform admin has to check it'
   }
 }
+
+/** Reasoning effort names as the Models pickers show them (the values come from the catalog). */
+export const EFFORT_LABELS: Record<Effort, string> = { none: 'None', low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' }
+export const effortText = (effort: string): string => EFFORT_LABELS[effort as Effort] ?? effort

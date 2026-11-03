@@ -72,12 +72,13 @@ export class PanelStack extends Stack {
     for (const table of [t.tenants, t.cells, t.leases]) table.grantReadData(fn)
     t.routes.grantReadWriteData(fn)
     // Host internal HTTP auth (contracts v3 §4.7) is a presigned sts:GetCallerIdentity of this role: no permission needed.
-    // [P2, accepted narrowed] Read-only transcript access: only the agent's `.claude/` tree of each ticket AP; tenant authz is
-    // enforced in code before each read.
-    const transcripts = 'tenants/*/*/*/.claude/*' // contracts v4: /tenants/<tenantId>/<cellId>/<ticketKey>
-    fn.addToRolePolicy(new iam.PolicyStatement({ actions: ['s3:GetObject'], resources: [shared.buckets.data.arnForObjects(transcripts)] }))
+    // [P2, accepted narrowed] Read-only transcript access: only the agent's `.claude/` tree and (v7) the Codex rollouts under
+    // `.codex/sessions/` of each ticket AP (not `.codex/config.toml`, `installation_id` or `skills/`); tenant authz is enforced in
+    // code before each read.
+    const transcripts = ['tenants/*/*/*/.claude/*', 'tenants/*/*/*/.codex/sessions/*'] // contracts v4: /tenants/<tenantId>/<cellId>/<ticketKey>
+    fn.addToRolePolicy(new iam.PolicyStatement({ actions: ['s3:GetObject'], resources: transcripts.map(key => shared.buckets.data.arnForObjects(key)) }))
     fn.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['s3:ListBucket'], resources: [shared.buckets.data.bucketArn], conditions: { StringLike: { 's3:prefix': [transcripts] } },
+      actions: ['s3:ListBucket'], resources: [shared.buckets.data.bucketArn], conditions: { StringLike: { 's3:prefix': transcripts } },
     }))
 
     // ---- CloudFront ----------------------------------------------------------------------------------------------
@@ -252,7 +253,7 @@ export class PanelStack extends Stack {
     ])
     NagSuppressions.addResourceSuppressions([fn, role], [
       { id: 'AwsSolutions-IAM4', reason: 'AWSLambdaBasicExecutionRole / VPCAccessExecutionRole are the standard Lambda managed policies.' },
-      { id: 'AwsSolutions-IAM5', reason: 'Object wildcard is the per-ticket .claude/ tree of the data bucket (read-only); X-Ray and DynamoDB index ARNs.' },
+      { id: 'AwsSolutions-IAM5', reason: 'Object wildcards are the per-ticket .claude/ and .codex/sessions/ trees of the data bucket (read-only); X-Ray and DynamoDB index ARNs.' },
     ], true)
     NagSuppressions.addResourceSuppressions([tenant.fn, tenant.role, platform.fn, platform.role], [
       { id: 'AwsSolutions-IAM4', reason: 'AWSLambdaBasicExecutionRole / VPCAccessExecutionRole are the standard Lambda managed policies.' },

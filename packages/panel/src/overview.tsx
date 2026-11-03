@@ -39,10 +39,11 @@ function ProblemLine({ problem, reload }: { problem: Problem; reload: () => Prom
 
 export function TicketLine({ ticket }: { ticket: TicketRow }) {
   const { openTicket } = usePanel()
-  return <li className="row">
+  return <li className="row" data-stage={ticket.stage} data-action={'action' in ticket ? ticket.action : undefined}>
     <div className="row-main">
       <button type="button" className="link row-title" onClick={() => openTicket(ticket.id)}>{ticket.title || ticket.id}</button>
-      <div className="row-meta"><span className="tag" data-stage={ticket.stage}>{stageText(ticket)}</span>
+      <div className="row-meta"><span className="tag" data-stage={ticket.stage}
+        data-action={'action' in ticket ? ticket.action : undefined}>{stageText(ticket)}</span>
         {ticket.threads[0] && <span>{ticket.threads[0].title}</span>}</div>
       {ticket.note && <PlainText text={ticket.note.text} className={ticket.note.error ? 'error' : 'hint'} />}
     </div>
@@ -55,7 +56,7 @@ type Ignored = DecisionListView['items'][number]
 
 function IgnoredLine({ decision }: { decision: Ignored }) {
   const sender = decision.sender ? localized(decision.sender.name, decision.sender.id) : ''
-  return <li className="row">
+  return <li className="row" data-state="ignored">
     <div className="row-main">
       <PlainText text={decision.preview || decision.threadTitle || decision.thread} className="row-title" />
       <div className="row-meta"><span>{when(decision.at)}</span>{decision.source && <span className="tag">{decision.source}</span>}
@@ -91,6 +92,7 @@ export function OverviewPage() {
       <ul className="list">{data.problems.map((problem, index) => <ProblemLine key={`${problem.kind}-${index}`} problem={problem}
         reload={reload} />)}</ul>
     </Section>}
+    <div className="pair">
     <Section title="Executor">
       <div className="stats">
         <Stat label="Running" value={`${data.executor.running} / ${data.executor.maxWorkers}`} />
@@ -107,6 +109,7 @@ export function OverviewPage() {
         {data.flow.dropped > 0 && <Stat label="Dropped replies" value={data.flow.dropped} />}
       </div>
     </Section>
+    </div>
     <RecentlyIgnored />
   </>
 }

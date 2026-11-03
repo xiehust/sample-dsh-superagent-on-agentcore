@@ -1,10 +1,14 @@
-/** Model choice per role (parent design §3): the contracts defaults, overridden per cell by `settings.eval.model`. */
-import { Models } from '@dshsa/contracts'
+/** Model choice per role (design §4.11, contracts v7): the cell's settings resolved against the catalog and its defaults. */
+import { resolveModel, type ModelSettings } from '@dshsa/contracts'
 
 export type ModelRole = 'eval' | 'reply'
-/** The part of a cell's settings that names a model (`RoleModelSchema`: `{ provider, model, reasoningEffort? }`, or null). */
-export interface ModelSettings { eval?: { model?: { model: string } | null } }
-/** The Bedrock model id for `role`: the cell's eval model when one is set (it serves both roles, as DSH's main Session did), else the default. */
+export type { ModelSettings }
+/** The Bedrock model id for `role` (reply falls back to the eval model, then to the catalog default). */
 export function modelFor(role: ModelRole, settings?: ModelSettings): string {
-  return settings?.eval?.model?.model || Models[role]
+  return resolveModel(role, settings).model
+}
+/** The model and reasoning effort `role` calls with; `effort` is undefined when none should be sent. */
+export function modelChoice(role: ModelRole, settings?: ModelSettings): { model: string; effort?: string } {
+  const { model, effort } = resolveModel(role, settings)
+  return { model, ...effort ? { effort } : {} }
 }

@@ -330,9 +330,20 @@ def build_app(pinner: Pinner | None = None) -> web.Application:
         except TimeoutError:
             log("sync_on_shutdown_timeout")
 
+    async def on_cleanup(_app: web.Application) -> None:
+        # Close what on_startup opened: otherwise aiohttp reports an unclosed session and connector on every VM stop.
+        for task in ("refresh_task", "lag_task"):
+            if task in _app:
+                _app[task].cancel()
+        if "proxy_runner" in _app:
+            await _app["proxy_runner"].cleanup()
+        if state.get("session"):
+            await state["session"].close()
+
     app = web.Application(client_max_size=10 * 1024 * 1024)
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
+    app.on_cleanup.append(on_cleanup)
     app.router.add_get("/ping", ping)
     app.router.add_post("/invocations", invocations)
     return app
