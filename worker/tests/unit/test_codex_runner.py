@@ -400,3 +400,27 @@ def test_a_cell_skill_codex_did_not_load_is_flagged(tmp_path):
     listing = {"roots": {}, "skills": []}  # codex refused every SKILL.md (no frontmatter): it lists nothing
     assert codex_runner.unexpected_skills(listing, "/mnt/work/.codex", "/home/agent/work/repo", {"dsh-superagent-github"}) == [
         "missing skill dsh-superagent-github"]
+
+
+def test_sessions_live_on_the_ap_and_everything_else_on_local_disk(tmp_path):
+    home, ap = tmp_path / "local" / ".codex", tmp_path / "ap" / ".codex" / "sessions"
+    codex_runner.prepare_home(str(home), {}, region="r", local=str(tmp_path / "l"), user_skills=str(tmp_path / "u"), sessions_dir=str(ap))
+    assert os.path.islink(home / "sessions") and os.readlink(home / "sessions") == str(ap) and ap.is_dir()
+    (home / "thread-writer-locks").mkdir()  # codex's locks land on local disk, never on the AP
+    assert sorted(os.listdir(tmp_path / "ap" / ".codex")) == ["sessions"]
+    codex_runner.prepare_home(str(home), {}, region="r", local=str(tmp_path / "l"), user_skills=str(tmp_path / "u"), sessions_dir=str(ap))
+    assert os.readlink(home / "sessions") == str(ap)  # idempotent
+
+
+def test_link_sessions_keeps_rollouts_written_locally_and_fixes_a_wrong_link(tmp_path):
+    home, ap = tmp_path / "home", tmp_path / "ap"
+    (home / "sessions" / "2026" / "11").mkdir(parents=True)
+    (home / "sessions" / "2026" / "11" / "rollout-a.jsonl").write_text("a\n")
+    (ap / "2026" / "11").mkdir(parents=True)
+    (ap / "2026" / "11" / "rollout-b.jsonl").write_text("b\n")
+    codex_runner.link_sessions(str(home), str(ap))
+    assert sorted(os.listdir(ap / "2026" / "11")) == ["rollout-a.jsonl", "rollout-b.jsonl"] and os.path.islink(home / "sessions")
+    os.unlink(home / "sessions")
+    os.symlink(tmp_path / "elsewhere", home / "sessions")
+    codex_runner.link_sessions(str(home), str(ap))
+    assert os.readlink(home / "sessions") == str(ap)

@@ -5,7 +5,8 @@ Same contract as `agent_core.sdk_runner`: one call per turn, `worker.tool` for t
 - One app-server per agent process, started on the first turn (after the V2 restore: never with pre-snapshot credentials),
   killed with the agent (PDEATHSIG), restarted when it died or when the cell's systemPrompt/skills changed (then resumed).
 - The thread id is server-generated: stored in `.dshsa/state.json` before the first turn/start; a fresh VM resumes it from
-  the rollout under CODEX_HOME (the ticket's AP). SQLite and logs stay on local disk (docs: network file systems).
+  the rollout. CODEX_HOME is on local disk; only `$CODEX_HOME/sessions` links to the ticket's AP (`/mnt/work/.codex/sessions`), so
+  codex's writer locks, SQLite, logs and helper links never outlive the VM (docs: network file systems; L8).
 - Inputs that arrive during a turn are steered in with turn/steer at tool boundaries (`Worker.steer_with`).
 Design: .trellis/tasks/11-03-codex-worker/design.md.
 """
@@ -153,10 +154,34 @@ def remove_tree(path: str, event: str) -> None:
     log(event, path=path)
 
 
+def link_sessions(codex_home: str, sessions_dir: str) -> None:
+    """`$CODEX_HOME/sessions` -> the ticket's AP (`/mnt/work/.codex/sessions`): only the rollouts are shared between microVMs.
+    Everything else codex keeps in CODEX_HOME stays on this VM's disk, above all `thread-writer-locks/`: file locks on S3 Files
+    (NFS) outlive a stopped VM by their lease, so a fresh VM found the thread "already has an active writer" (L8, 2026-11-03)."""
+    os.makedirs(sessions_dir, exist_ok=True)
+    link = os.path.join(codex_home, "sessions")
+    if os.path.islink(link):
+        if os.readlink(link) == sessions_dir:
+            return
+        os.unlink(link)
+    elif os.path.isdir(link):  # rollouts written locally (never expected): keep them on the AP before linking
+        for entry in os.listdir(link):
+            target = os.path.join(sessions_dir, entry)
+            if os.path.isdir(target) and os.path.isdir(os.path.join(link, entry)):
+                shutil.copytree(os.path.join(link, entry), target, dirs_exist_ok=True)
+            else:
+                shutil.move(os.path.join(link, entry), target)
+        shutil.rmtree(link)
+    os.symlink(sessions_dir, link)
+
+
 def prepare_home(codex_home: str, config: dict[str, Any], *, region: str, local: str, template: str = TEMPLATE,
-                 user_skills: str = USER_SKILLS) -> None:
-    """Before an app-server start: the locked config, exactly the cell's skills, no bundled or user skill roots (design §6.1)."""
+                 user_skills: str = USER_SKILLS, sessions_dir: str | None = None) -> None:
+    """Before an app-server start: the locked config, exactly the cell's skills, no bundled or user skill roots (design §6.1),
+    and (in the image) the rollouts on the AP."""
     os.makedirs(codex_home, exist_ok=True)
+    if sessions_dir:
+        link_sessions(codex_home, sessions_dir)
     os.makedirs(os.path.join(local, "log"), exist_ok=True)
     with open(template) as f:
         rendered = render_config(f.read(), region, local)
@@ -365,8 +390,9 @@ class CodexRunner:
 
     def __init__(self, *, codex_home: str, repo_dir: str, local_dir: str = LOCAL_DIR, command: list[str] | None = None,
                  region: str | None = None, template: str = TEMPLATE, user_skills: str = USER_SKILLS, base_env: dict[str, str] | None = None,
-                 flush_wait_s: float = FLUSH_WAIT_S) -> None:
+                 flush_wait_s: float = FLUSH_WAIT_S, sessions_dir: str | None = None) -> None:
         self.codex_home, self.repo_dir, self.local_dir, self.template, self.user_skills = codex_home, repo_dir, local_dir, template, user_skills
+        self.sessions_dir = sessions_dir
         self.command = command or [CODEX_BIN, "app-server", *config_overrides()]
         self.region = region or os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or contracts.REGION
         self.base_env, self.flush_wait_s = base_env, flush_wait_s
@@ -416,7 +442,7 @@ class CodexRunner:
             await self.server.close()
         started = time.monotonic()
         await asyncio.to_thread(prepare_home, self.codex_home, config, region=self.region, local=self.local_dir, template=self.template,
-                                user_skills=self.user_skills)
+                                user_skills=self.user_skills, sessions_dir=self.sessions_dir)
         env = child_env(config, self.codex_home, self.local_dir, self.base_env)
         self.server = AppServer(self.command, env, self.repo_dir, self.on_request)
         await self.server.start(os.environ.get(contracts.WORKER_VERSION_ENV, "dev"))
