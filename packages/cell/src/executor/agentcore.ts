@@ -53,6 +53,11 @@ const ASSIGNMENT_CHARS = 1500
 /** True when the assignment's last turn ended after its last delivery, so its worker is not in a turn. */
 const idleSince = (assignment: Assignment): boolean => !!assignment.idleAt && (!assignment.deliveredAt || assignment.idleAt >= assignment.deliveredAt)
 class WorkerRefused extends Error { constructor(readonly code: string, message: string) { super(`${code}: ${message}`) } }
+/** AgentCore's "Received error (502) from runtime": the session's microVM did not come up (RuntimeClientError / HTTP 502). */
+const runtimeGateway = (error: unknown): boolean => {
+  const value = error as { name?: string; $metadata?: { httpStatusCode?: number }; message?: string } | null
+  return !!value && (value.$metadata?.httpStatusCode === 502 || (value.name === 'RuntimeClientError' && /\(502\)/.test(value.message ?? '')))
+}
 /** v7: the ticket's worker type has no runtime in this installation (never retried). */
 class NoRuntime extends Error {
   readonly code = 'bad_request'
@@ -156,7 +161,19 @@ export class AgentCoreExecutor implements Executor {
     const request = InvocationRequest.parse({ v: 1, action, token, ticket: block, inputs,
       ...action === 'start' || action === 'deliver' ? { config: this.config(ticket, type) } : {} })
     if (!this.host.holding()) throw new Later('The cell lease is not held')
-    const response = InvocationResponse.parse(await runtime.invoke(sessionId, request, this.host.lifetime))
+    let raw: unknown
+    try { raw = await runtime.invoke(sessionId, request, this.host.lifetime) }
+    catch (error) {
+      // A session AgentCore cannot bring back (502 from the runtime, seen live after an idle timeout) is stopped once and retried:
+      // the next invoke provisions a fresh microVM, which resumes from the ticket's access point.
+      if (!runtimeGateway(error) || !runtime.stopSession || action === 'stop') throw error
+      this.host.log.warn('worker session unreachable; stopping it and retrying once', { ticketId: ticket.id, runtimeSessionId: sessionId, error: String(error).slice(0, 300) })
+      await runtime.stopSession(sessionId, this.host.lifetime).catch(() => undefined)
+      this.seen.delete(sessionId)
+      if (!this.host.holding()) throw new Later('The cell lease is not held')
+      raw = await runtime.invoke(sessionId, request, this.host.lifetime)
+    }
+    const response = InvocationResponse.parse(raw)
     this.seen.set(sessionId, { version: response.workerVersion ?? null })
     return response
   }

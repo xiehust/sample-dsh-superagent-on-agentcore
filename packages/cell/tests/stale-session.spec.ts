@@ -117,3 +117,19 @@ it('does not stop when the stop itself fails, and still delivers', async () => {
   await h.followUp('2')
   expect(h.calls).toEqual(['start', 'stopSession:failed', 'deliver'])
 })
+
+it('a session the runtime cannot bring back (502) is stopped once and the invoke retried', async () => {
+  const h = harness({ vm: null })
+  let failures = 1
+  const invoke = h.deps.runtime.invoke
+  h.deps.runtime.invoke = async (sessionId, request, signal) => {
+    if (request.action === 'start' && failures-- > 0) {
+      h.calls.push('start:502')
+      throw Object.assign(new Error('Received error (502) from runtime. Please check your CloudWatch logs for more information.'), { name: 'RuntimeClientError', $metadata: { httpStatusCode: 502 } })
+    }
+    return invoke(sessionId, request, signal)
+  }
+  const ticket = await h.accept()
+  expect(h.calls).toEqual(['start:502', `stopSession:${runtimeSessionId(CELL_ID, ticket.id)}`, 'start'])
+  expect(latestAssignment(h.cell.store.tickets.get(ticket.id)!)!.startedAt).toBeTruthy()
+})
