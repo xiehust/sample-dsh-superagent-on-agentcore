@@ -1,4 +1,4 @@
-/* dshsa adapter of DSH src/app/execution-environment.ts: CellInfo instead of Deployment; the ticket directory is the worker's /mnt/work/repo. */
+/* dshsa adapter of DSH src/app/execution-environment.ts: CellInfo instead of Deployment; the ticket directory is the worker's local working copy /home/agent/work/repo. */
 /** Execution environment variables exposed to prepare commands and documented in worker Session instructions; never contains credentials. */
 import type { Ticket, Trigger } from '../core/index.ts'
 import type { CellInfo } from '@dshsa/core/host'
@@ -15,8 +15,8 @@ export const EXECUTOR_VARIABLES: readonly (VariableSpec & { ticket?: true })[] =
 ]
 export interface Variable { key: string; value: string; description: Localized; owner: string }
 
-/** dshsa: the worker's working copy inside its ticket's access point (parent design §4.10). */
-export const WORKER_REPOSITORY_DIR = '/mnt/work/repo'
+/** dshsa: the worker's working copy, on the microVM's local disk since contract v5 (design §4.10; worker LOCAL_REPO_DIR). */
+export const WORKER_REPOSITORY_DIR = '/home/agent/work/repo'
 /** dshsa: kept for the copied settings view, which shows the ticket directory root. */
 export const executionRoot = (_settings: Settings, _stateDir: string): string => WORKER_REPOSITORY_DIR
 

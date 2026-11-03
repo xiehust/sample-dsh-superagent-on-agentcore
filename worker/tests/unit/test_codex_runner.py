@@ -295,7 +295,7 @@ def test_rendered_config_and_overrides_lock_the_codex_down():
     for line in ['model_provider = "amazon-bedrock-runtime"', 'chatgpt_base_url = "http://127.0.0.1:9"', 'web_search = "disabled"',
                  'forced_login_method = "api"', 'sqlite_home = "/local"', 'region = "ap-northeast-1"', "plugins = false", "multi_agent = false",
                  "memories = false", "apps = false", "browser_use = false", "computer_use = false", "image_generation = false",
-                 "unbounded_connection_retries = false", 'persistence = "none"']:
+                 "unbounded_connection_retries = false", "guardian_approval = false", 'persistence = "none"']:
         assert line in rendered, line
     assert "[skills.bundled]\nenabled = false" in rendered and "{" not in rendered.replace("{region}", "")
     args = codex_runner.config_overrides()
@@ -303,6 +303,7 @@ def test_rendered_config_and_overrides_lock_the_codex_down():
     assert args[::2] == ["-c"] * len(pairs)
     assert pairs["model_provider"] == '"amazon-bedrock-runtime"' and pairs["skills.bundled.enabled"] == "false"
     assert pairs["features.multi_agent"] == "false" and pairs["chatgpt_base_url"] == '"http://127.0.0.1:9"'
+    assert pairs["features.guardian_approval"] == "false"
 
 
 def test_prepare_home_leaves_only_the_cells_skills(tmp_path):
@@ -393,3 +394,9 @@ def test_skill_roots_are_compared_as_real_paths(tmp_path):
     listing = {"roots": {"r0": str(tmp_path / "real" / "work" / ".codex" / "skills"), "r1": str(tmp_path / "real" / "repo" / ".agents" / "skills")},
                "skills": [("dsh-superagent-x", "r0")]}
     assert codex_runner.unexpected_skills(listing, str(tmp_path / "link" / "work" / ".codex"), str(tmp_path / "link" / "repo"), {"dsh-superagent-x"}) == []
+
+
+def test_a_cell_skill_codex_did_not_load_is_flagged(tmp_path):
+    listing = {"roots": {}, "skills": []}  # codex refused every SKILL.md (no frontmatter): it lists nothing
+    assert codex_runner.unexpected_skills(listing, "/mnt/work/.codex", "/home/agent/work/repo", {"dsh-superagent-github"}) == [
+        "missing skill dsh-superagent-github"]

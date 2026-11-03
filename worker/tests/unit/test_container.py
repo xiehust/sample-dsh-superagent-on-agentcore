@@ -515,7 +515,7 @@ def test_write_skills_keeps_exactly_the_configured_skills(tmp_path):
     (tmp_path / "skills" / ".system").mkdir()
     agent_core.write_skills(str(tmp_path), [{"name": "a", "content": "A2"}])
     assert sorted(p.name for p in (tmp_path / "skills").iterdir()) == ["a"]
-    assert (tmp_path / "skills" / "a" / "SKILL.md").read_text() == "A2"
+    assert (tmp_path / "skills" / "a" / "SKILL.md").read_text().endswith("\n\nA2")
     assert (outside / "keep.txt").exists()  # a symlinked entry is unlinked, never followed
 
 
@@ -542,3 +542,14 @@ async def test_a_retry_resends_inputs_that_never_reached_the_agent(tmp_path, del
     assert len(prompts) == 2 and sleeps == [15]
     assert ("please fix the login bug" in prompts[1]) is resent
     assert "passing reason" in prompts[1]
+
+
+def test_skill_documents_get_the_frontmatter_both_clis_read():
+    doc = agent_core.skill_document("dsh-superagent-github", "# GitHub: reading threads\n\nWorkers use orchestrator_read ...")
+    assert doc.startswith('---\nname: dsh-superagent-github\ndescription: "GitHub: reading threads"\n---\n\n# GitHub')
+    plain = agent_core.skill_document("x", "\n\nWorkers use orchestrator_read for context: \"quoted\".\nMore.")
+    assert plain.splitlines()[2] == 'description: "Workers use orchestrator_read for context: \\"quoted\\"."'
+    assert agent_core.skill_document("x", "").startswith('---\nname: x\ndescription: "Instructions for x."\n---\n')
+    assert len(agent_core.skill_document("x", "y" * 500).splitlines()[2]) < 220
+    kept = "---\nname: own\ndescription: Own.\n---\nBody"
+    assert agent_core.skill_document("own", kept) == kept

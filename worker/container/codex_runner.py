@@ -48,7 +48,7 @@ LOCKED = {"model_provider": PROVIDER, "forced_login_method": "api", "chatgpt_bas
           "history.persistence": "none", "features.plugins": False, "features.remote_plugin": False, "features.apps": False,
           "features.memories": False, "features.multi_agent": False, "features.multi_agent_v2": False, "features.browser_use": False,
           "features.computer_use": False, "features.image_generation": False, "features.code_mode_host": False,
-          "features.skill_mcp_dependency_install": False, "features.unbounded_connection_retries": False}
+          "features.skill_mcp_dependency_install": False, "features.unbounded_connection_retries": False, "features.guardian_approval": False}
 # Never from the process environment: the API-key path, the gateway's root-only mount profile, other agents' settings.
 DENY_ENV = ("AWS_BEARER_TOKEN_BEDROCK", "AWS_PROFILE", "AWS_DEFAULT_PROFILE", "AWS_CONFIG_FILE", "AWS_SHARED_CREDENTIALS_FILE")
 DENY_PREFIX = ("OPENAI_", "CODEX_")
@@ -236,9 +236,13 @@ def unexpected_skills(listing: dict[str, Any], codex_home: str, repo_dir: str, w
         root = real(root).rstrip("/")
         if root != ours and not (root.startswith(repo) and root.endswith("/.agents/skills")) and root != repo + ".agents/skills":
             problems.append(f"root {key}={root}")
+    shown = set()
     for name, key in listing["skills"]:
-        if real(listing["roots"].get(key, "")).rstrip("/") == ours and agent_core.skill_name(name) not in wanted:
-            problems.append(f"skill {name}")
+        if real(listing["roots"].get(key, "")).rstrip("/") == ours:
+            shown.add(agent_core.skill_name(name))
+            if agent_core.skill_name(name) not in wanted:
+                problems.append(f"skill {name}")
+    problems += [f"missing skill {name}" for name in sorted(wanted - shown)]  # e.g. a SKILL.md codex refused to load
     return problems
 
 
@@ -563,12 +567,9 @@ class CodexRunner:
         log("codex_rollout_unflushed", turnId=turn_id)
 
     def check_skills(self, config: dict[str, Any]) -> None:
-        listing = skills_listing(self.thread_path)
-        if listing is None:
-            log("codex_skills", roots={}, names=[])
-            return
+        wanted = {name for s in config.get("skills") or [] if (name := agent_core.skill_name(s.get("name", "")))}
+        listing = skills_listing(self.thread_path) or {"roots": {}, "skills": []}
         log("codex_skills", roots=listing["roots"], names=[name for name, _ in listing["skills"]])
-        wanted = {agent_core.skill_name(s.get("name", "")) for s in config.get("skills") or []}
         problems = unexpected_skills(listing, self.codex_home, self.repo_dir, wanted)
         if problems:
             print(json.dumps({"component": "agent", "event": "codex_skills_unexpected", "level": "WARNING", "problems": problems[:20]}), flush=True)

@@ -374,6 +374,17 @@ def skill_name(raw: str) -> str:
     return re.sub(r"[^a-z0-9-]", "-", (raw or "").lower()).strip("-")
 
 
+def skill_document(name: str, content: str) -> str:
+    """SKILL.md with the YAML frontmatter both CLIs read (`name`, `description`): codex 0.166.0 refuses a skill without it, and
+    the cell's built-in skills have none. Content that already starts with frontmatter is kept as it is."""
+    if content.lstrip().startswith("---"):
+        return content
+    first = next((line.strip().lstrip("#").strip() for line in content.splitlines() if line.strip().lstrip("#").strip()), "")
+    description = (first[:197] + "...") if len(first) > 200 else first or f"Instructions for {name}."
+    # JSON strings are valid YAML double-quoted scalars: no quoting or colon problems in the description.
+    return f"---\nname: {name}\ndescription: {json.dumps(description)}\n---\n\n{content}"
+
+
 def write_skills(config_dir: str, skills: list[dict[str, str]]) -> None:
     """`config_dir/skills` holds exactly the config's skills: each is rewritten whole and every other entry is removed."""
     root = os.path.join(config_dir, "skills")
@@ -394,7 +405,7 @@ def write_skills(config_dir: str, skills: list[dict[str, str]]) -> None:
             os.unlink(path)
         os.makedirs(path, exist_ok=True)
         with open(os.path.join(path, "SKILL.md"), "w") as f:
-            f.write(skill.get("content", ""))
+            f.write(skill_document(name, skill.get("content", "")))
 
 
 def monotonic() -> float:

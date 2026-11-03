@@ -62,5 +62,7 @@ in_app_voice = false
 bedrock_setup_wizard = false
 skill_mcp_dependency_install = false
 tool_suggest = false
+# The approval reviewer (guardian, model gpt-5.6-luna: not a Bedrock profile id). Approvals are `never` here.
+guardian_approval = false
 # A connection failure must end the turn (the worker retries it 3x, then reports failed), never retry forever.
 unbounded_connection_retries = false

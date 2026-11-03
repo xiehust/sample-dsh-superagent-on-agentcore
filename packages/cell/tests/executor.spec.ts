@@ -47,7 +47,7 @@ describe('AgentCoreExecutor', () => {
     expect(JSON.parse(start.request.inputs[0]!.text)).toMatchObject({ ticket_id: ticket.id, trigger: { trigger_id: key('chat', '1') } })
     expect(start.request.config).toMatchObject({ model: 'global.anthropic.claude-opus-5-5', repo: { fullName: 'acme/widgets', defaultBranch: 'main' } })
     expect(start.request.config!.systemPrompt).toContain('You are a worker.')
-    expect(start.request.config!.env).toMatchObject({ DSH_SUPERAGENT_DIR: '/mnt/work/repo', DSH_SUPERAGENT_TICKET: ticket.id })
+    expect(start.request.config!.env).toMatchObject({ DSH_SUPERAGENT_DIR: '/home/agent/work/repo', DSH_SUPERAGENT_TICKET: ticket.id })
     const claims = TicketTokenClaims.parse(decodeUnverified(start.request.token).claims)
     expect(claims).toMatchObject({ sub: ticketKey(CELL_ID, ticket.id), cid: CELL_ID, tkt: ticket.id, asg: latestAssignment(ticket)!.id })
     expect(latestAssignment(h.cell.store.tickets.get(ticket.id)!)?.state).toBe('running')
