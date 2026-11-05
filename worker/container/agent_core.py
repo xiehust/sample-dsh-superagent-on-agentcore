@@ -33,6 +33,9 @@ BUILTIN_TOOLS = ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "Bash", "
 DSHSA_TOOLS = ["report", "ack", "handback", "thread_follow", "thread_unrelated", "read"]
 # claude_agent_sdk 0.2.176 EffortLevel (CLI --effort); the catalog allows the same set for every Claude model.
 CLAUDE_EFFORTS = ("low", "medium", "high", "xhigh", "max")
+# One CLI stdout line (NDJSON) may carry a Read of an image as base64: a rendered diagram is easily over the SDK's 1 MB default,
+# which fails the turn ("JSON message exceeded maximum buffer size"). Same bound as codex_runner.READ_LIMIT.
+MAX_BUFFER_SIZE = 64 << 20
 
 
 def log(event: str, **fields: Any) -> None:
@@ -358,7 +361,7 @@ def sdk_options(config: dict[str, Any], *, repo_dir: str, config_dir: str, sessi
         cwd=repo_dir, model=config.get("model") or None, permission_mode="bypassPermissions",
         system_prompt={"type": "preset", "preset": "claude_code", "append": config.get("systemPrompt", "")},
         setting_sources=["user", "project"], allowed_tools=BUILTIN_TOOLS + [f"mcp__dshsa__{name}" for name in DSHSA_TOOLS],
-        env={**env, "CLAUDE_CONFIG_DIR": config_dir, "CLAUDE_CODE_USE_BEDROCK": "1"},
+        env={**env, "CLAUDE_CONFIG_DIR": config_dir, "CLAUDE_CODE_USE_BEDROCK": "1"}, max_buffer_size=MAX_BUFFER_SIZE,
         **({"resume": session} if resume else {"session_id": session}),
     )
     effort = config.get("effort")

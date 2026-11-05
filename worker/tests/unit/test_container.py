@@ -478,6 +478,11 @@ def test_sdk_options_filter_the_cell_env():
     assert env == {"FOO": "1", "CLAUDE_CONFIG_DIR": "/c", "CLAUDE_CODE_USE_BEDROCK": "1"}
 
 
+def test_sdk_options_allow_a_cli_line_bigger_than_the_sdk_default():
+    # A Read of a rendered PNG comes back as one NDJSON line with the image in base64; the SDK's 1 MB default failed the turn.
+    assert options({})["max_buffer_size"] == 64 << 20
+
+
 def with_agent(keys, agent, action="start"):
     req = request(keys, action, inputs=[inp(1)])
     req["config"]["agent"] = agent
