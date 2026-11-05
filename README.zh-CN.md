@@ -8,6 +8,7 @@ dshsa 把 GitHub 和飞书/Lark 中的消息转成 **Ticket**（工单），交�
 
 深入阅读：
 - [`docs/design.md`](docs/design.md)：架构、跨模块契约（§4）和安全模型，是唯一权威来源。
+- [`docs/architecture.zh-CN.md`](docs/architecture.zh-CN.md)：中文架构设计文档，配有总体架构图、流程图和基础设施部署图。
 - [`research/00-synthesis.md`](research/00-synthesis.md)：对原型和隔离示例的分析总结（中文）。
 
 ## 架构

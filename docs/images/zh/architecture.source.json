@@ -1,0 +1,600 @@
+{
+ "schema_version": 1,
+ "mode": "architecture",
+ "style": 1,
+ "quality_profile": "standard",
+ "text_policy": "strict",
+ "width": 1110,
+ "height": 1140,
+ "title": "dshsa 总体架构",
+ "subtitle": "GitHub 与飞书/Lark 消息变成 Ticket，由 AgentCore Runtime 上的编码智能体完成",
+ "containers": [
+  {
+   "id": "host",
+   "x": 20,
+   "y": 400,
+   "width": 1040,
+   "height": 290,
+   "label": "dshsa-host"
+  },
+  {
+   "id": "cell",
+   "parent": "host",
+   "x": 280,
+   "y": 440,
+   "width": 520,
+   "height": 230,
+   "label": "租户 cell",
+   "stroke": "#dc2626",
+   "stroke_dasharray": "6 4",
+   "fill": "#fff7f7"
+  },
+  {
+   "id": "microvm",
+   "x": 280,
+   "y": 830,
+   "width": 520,
+   "height": 190,
+   "label": "Worker microVM",
+   "stroke": "#9333ea",
+   "stroke_dasharray": "6 4",
+   "fill": "#fbf7ff"
+  },
+  {
+   "id": "apiso",
+   "x": 820,
+   "y": 830,
+   "width": 240,
+   "height": 190,
+   "label": "AP 隔离",
+   "stroke": "#16a34a",
+   "stroke_dasharray": "6 4",
+   "fill": "#f6fdf8"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "feishu",
+   "kind": "speech",
+   "x": 40,
+   "y": 100,
+   "width": 200,
+   "height": 56,
+   "label": "飞书 / Lark",
+   "sublabel": "群聊中的机器人",
+   "fill": "#ecfeff",
+   "stroke": "#0891b2",
+   "flat": true
+  },
+  {
+   "id": "github",
+   "kind": "rect",
+   "x": 300,
+   "y": 100,
+   "width": 210,
+   "height": 56,
+   "label": "GitHub App",
+   "sublabel": "Issue · PR · 评论",
+   "fill": "#f8fafc",
+   "stroke": "#334155",
+   "flat": true
+  },
+  {
+   "id": "users",
+   "kind": "user_avatar",
+   "x": 830,
+   "y": 90,
+   "width": 210,
+   "height": 72,
+   "label": "团队成员",
+   "sublabel": "浏览器中的面板",
+   "fill": "#eff6ff",
+   "stroke": "#3b82f6",
+   "flat": true
+  },
+  {
+   "id": "ingress",
+   "kind": "rect",
+   "x": 300,
+   "y": 200,
+   "width": 210,
+   "height": 60,
+   "label": "dshsa-ingress",
+   "sublabel": "API GW + webhook Lambda · HMAC",
+   "fill": "#fff7ed",
+   "stroke": "#f97316",
+   "flat": true
+  },
+  {
+   "id": "bedrock",
+   "kind": "double_rect",
+   "x": 570,
+   "y": 250,
+   "width": 210,
+   "height": 60,
+   "label": "Amazon Bedrock",
+   "sublabel": "评估、回复与 worker 模型",
+   "fill": "#faf5ff",
+   "stroke": "#8b5cf6",
+   "flat": true
+  },
+  {
+   "id": "cloudfront",
+   "kind": "rect",
+   "x": 830,
+   "y": 200,
+   "width": 210,
+   "height": 60,
+   "label": "CloudFront + Cognito",
+   "sublabel": "面板 SPA · 登录",
+   "fill": "#eff6ff",
+   "stroke": "#3b82f6",
+   "flat": true
+  },
+  {
+   "id": "sqs",
+   "kind": "rect",
+   "x": 300,
+   "y": 300,
+   "width": 210,
+   "height": 60,
+   "label": "每 cell 一个 SQS FIFO",
+   "sublabel": "dshsa-cell-<cellId>.fifo",
+   "fill": "#fff7ed",
+   "stroke": "#f97316",
+   "flat": true
+  },
+  {
+   "id": "panelapi",
+   "kind": "rect",
+   "x": 830,
+   "y": 300,
+   "width": 210,
+   "height": 60,
+   "label": "panel-api",
+   "sublabel": "JWT 授权器 + Lambda",
+   "fill": "#eff6ff",
+   "stroke": "#3b82f6",
+   "flat": true
+  },
+  {
+   "id": "connector",
+   "kind": "rect",
+   "x": 40,
+   "y": 470,
+   "width": 200,
+   "height": 64,
+   "label": "Feishu Connector",
+   "sublabel": "每租户一个 · 长连接",
+   "fill": "#ecfeff",
+   "stroke": "#0891b2",
+   "flat": true
+  },
+  {
+   "id": "engine",
+   "kind": "double_rect",
+   "x": 300,
+   "y": 490,
+   "width": 210,
+   "height": 64,
+   "label": "DSH Engine + SQLite",
+   "sublabel": "每个（租户，仓库）一个",
+   "fill": "#ffffff",
+   "stroke": "#dc2626",
+   "flat": true
+  },
+  {
+   "id": "assessor",
+   "kind": "rect",
+   "x": 570,
+   "y": 490,
+   "width": 210,
+   "height": 64,
+   "label": "Assessor / Replier",
+   "sublabel": "经 Outbox 回复",
+   "fill": "#ffffff",
+   "stroke": "#dc2626",
+   "flat": true
+  },
+  {
+   "id": "executor",
+   "kind": "rect",
+   "x": 570,
+   "y": 594,
+   "width": 210,
+   "height": 56,
+   "label": "AgentCore Executor",
+   "sublabel": "启动与恢复 worker",
+   "fill": "#ffffff",
+   "stroke": "#dc2626",
+   "flat": true
+  },
+  {
+   "id": "internal",
+   "kind": "rect",
+   "x": 830,
+   "y": 490,
+   "width": 210,
+   "height": 64,
+   "label": "内部 HTTP :8080",
+   "sublabel": "IAM 调用方证明（STS）",
+   "fill": "#ffffff",
+   "stroke": "#64748b",
+   "flat": true
+  },
+  {
+   "id": "state",
+   "kind": "rect",
+   "x": 300,
+   "y": 730,
+   "width": 210,
+   "height": 60,
+   "label": "S3 state 桶",
+   "sublabel": "Litestream 副本",
+   "fill": "#ecfdf5",
+   "stroke": "#10b981"
+  },
+  {
+   "id": "provisioner",
+   "kind": "rect",
+   "x": 830,
+   "y": 730,
+   "width": 210,
+   "height": 60,
+   "label": "provisioner Lambda",
+   "sublabel": "为 Ticket 创建访问点",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "kms",
+   "kind": "rect",
+   "x": 570,
+   "y": 730,
+   "width": 210,
+   "height": 60,
+   "label": "KMS",
+   "sublabel": "ES256 ticket token",
+   "fill": "#fefce8",
+   "stroke": "#ca8a04",
+   "flat": true
+  },
+  {
+   "id": "workerapi",
+   "kind": "rect",
+   "x": 40,
+   "y": 900,
+   "width": 200,
+   "height": 64,
+   "label": "worker-api",
+   "sublabel": "私有 API GW · ticket token",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "agent",
+   "kind": "rect",
+   "x": 300,
+   "y": 900,
+   "width": 210,
+   "height": 70,
+   "label": "agent（uid 1000）",
+   "sublabel": "Claude Agent SDK / Codex",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "gateway",
+   "kind": "rect",
+   "x": 570,
+   "y": 900,
+   "width": 210,
+   "height": 70,
+   "label": "gateway（root）",
+   "sublabel": "持有 token · 挂载 AP",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "broker",
+   "kind": "rect",
+   "x": 840,
+   "y": 875,
+   "width": 200,
+   "height": 56,
+   "label": "broker Lambda",
+   "sublabel": "STS + 会话策略",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "ap",
+   "kind": "rect",
+   "x": 840,
+   "y": 950,
+   "width": 200,
+   "height": 56,
+   "label": "每 Ticket 一个 S3 Files AP",
+   "sublabel": "/mnt/work · repo.bundle",
+   "fill": "#ecfdf5",
+   "stroke": "#10b981"
+  }
+ ],
+ "arrows": [
+  {
+   "id": "e-webhook",
+   "source": "github",
+   "target": "ingress",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "data",
+   "label": "webhook"
+  },
+  {
+   "id": "e-ingress-sqs",
+   "source": "ingress",
+   "target": "sqs",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "data",
+   "label": "source.event"
+  },
+  {
+   "id": "e-feishu",
+   "source": "connector",
+   "target": "feishu",
+   "source_port": "top",
+   "target_port": "bottom",
+   "flow": "data",
+   "label": "长连接"
+  },
+  {
+   "id": "e-connector-sqs",
+   "source": "connector",
+   "target": "sqs",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "data",
+   "route_points": [
+    [
+     252,
+     502
+    ],
+    [
+     252,
+     321
+    ]
+   ]
+  },
+  {
+   "id": "e-sqs-engine",
+   "source": "sqs",
+   "target": "engine",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "data",
+   "label": "cell 队列"
+  },
+  {
+   "id": "e-eval",
+   "source": "engine",
+   "target": "assessor",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "control"
+  },
+  {
+   "id": "e-bedrock",
+   "source": "assessor",
+   "target": "bedrock",
+   "source_port": "top",
+   "target_port": "bottom",
+   "flow": "control",
+   "label": "Converse"
+  },
+  {
+   "id": "e-litestream",
+   "source": "engine",
+   "target": "state",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "write",
+   "label": "Litestream"
+  },
+  {
+   "id": "e-signin",
+   "source": "users",
+   "target": "cloudfront",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "control",
+   "label": "登录"
+  },
+  {
+   "id": "e-jwt",
+   "source": "cloudfront",
+   "target": "panelapi",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "control",
+   "label": "Cognito JWT"
+  },
+  {
+   "id": "e-panel-host",
+   "source": "panelapi",
+   "target": "internal",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "control",
+   "label": "租约持有者"
+  },
+  {
+   "id": "e-internal-cell",
+   "source": "internal",
+   "target": "assessor",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "control"
+  },
+  {
+   "id": "e-kms",
+   "source": "executor",
+   "target": "kms",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "read",
+   "label": "签发 token"
+  },
+  {
+   "id": "e-provision",
+   "source": "executor",
+   "target": "provisioner",
+   "source_port": "right",
+   "target_port": "top",
+   "flow": "control",
+   "route_points": [
+    [
+     935,
+     622
+    ]
+   ],
+   "label": "创建 AP"
+  },
+  {
+   "id": "e-invoke",
+   "source": "executor",
+   "target": "gateway",
+   "source_port": "left",
+   "target_port": "top",
+   "flow": "control",
+   "label": "InvokeAgentRuntime",
+   "route_points": [
+    [
+     540,
+     622
+    ],
+    [
+     540,
+     880
+    ],
+    [
+     675,
+     880
+    ]
+   ],
+   "label_dx": 66
+  },
+  {
+   "id": "e-create-ap",
+   "source": "provisioner",
+   "target": "ap",
+   "source_port": "right",
+   "target_port": "right",
+   "flow": "write",
+   "route_points": [
+    [
+     1085,
+     760
+    ],
+    [
+     1085,
+     978
+    ]
+   ]
+  },
+  {
+   "id": "e-proxy",
+   "source": "agent",
+   "target": "gateway",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "control"
+  },
+  {
+   "id": "e-broker",
+   "source": "gateway",
+   "target": "broker",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "read",
+   "label": "token"
+  },
+  {
+   "id": "e-mount",
+   "source": "gateway",
+   "target": "ap",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "write",
+   "label": "挂载"
+  },
+  {
+   "id": "e-gw-workerapi",
+   "source": "gateway",
+   "target": "workerapi",
+   "source_port": "bottom",
+   "target_port": "bottom",
+   "flow": "data",
+   "label": "事件 · 读取",
+   "route_points": [
+    [
+     670,
+     1000
+    ],
+    [
+     140,
+     1000
+    ]
+   ]
+  },
+  {
+   "id": "e-workerapi-sqs",
+   "source": "workerapi",
+   "target": "sqs",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "data",
+   "label": "worker.event",
+   "route_points": [
+    [
+     264,
+     932
+    ],
+    [
+     264,
+     339
+    ]
+   ]
+  }
+ ],
+ "legend_orientation": "horizontal",
+ "legend_x": 40,
+ "legend_y": 1062,
+ "legend_locked": true,
+ "legend": [
+  {
+   "flow": "data",
+   "label": "消息与事件"
+  },
+  {
+   "flow": "control",
+   "label": "API 调用"
+  },
+  {
+   "flow": "write",
+   "label": "存储"
+  },
+  {
+   "flow": "read",
+   "label": "ticket token / 凭证"
+  }
+ ],
+ "footer": "dshsa-host 是 ECS Fargate 服务；每个任务通过 DynamoDB 租约认领它运行的 cell 和 Connector。",
+ "footer_x": 40,
+ "footer_y": 1118
+}

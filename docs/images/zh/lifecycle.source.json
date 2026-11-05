@@ -1,0 +1,517 @@
+{
+ "schema_version": 1,
+ "mode": "flowchart",
+ "style": 1,
+ "quality_profile": "standard",
+ "text_policy": "strict",
+ "width": 1260,
+ "height": 810,
+ "title": "一条消息的生命周期",
+ "subtitle": "从 @机器人 到 PR 交付：接入 → 决策 → 执行 → 回复",
+ "containers": [
+  {
+   "id": "l0",
+   "x": 24,
+   "y": 100,
+   "width": 282,
+   "height": 580,
+   "label": "接入层"
+  },
+  {
+   "id": "l1",
+   "x": 334,
+   "y": 100,
+   "width": 282,
+   "height": 580,
+   "label": "租户 cell"
+  },
+  {
+   "id": "l2",
+   "x": 644,
+   "y": 100,
+   "width": 282,
+   "height": 580,
+   "label": "Worker microVM"
+  },
+  {
+   "id": "l3",
+   "x": 954,
+   "y": 100,
+   "width": 282,
+   "height": 580,
+   "label": "回复交付"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "msg",
+   "kind": "speech",
+   "x": 40,
+   "y": 150,
+   "width": 250,
+   "height": 64,
+   "label": "1 收到消息",
+   "sublabel": "@机器人 · 评论 · CI 结果",
+   "fill": "#fff7ed",
+   "stroke": "#f97316",
+   "flat": true
+  },
+  {
+   "id": "verify",
+   "kind": "rect",
+   "x": 40,
+   "y": 260,
+   "width": 250,
+   "height": 64,
+   "label": "2 接入校验",
+   "sublabel": "webhook HMAC · 飞书长连接",
+   "fill": "#fff7ed",
+   "stroke": "#f97316",
+   "flat": true
+  },
+  {
+   "id": "route",
+   "kind": "rect",
+   "x": 40,
+   "y": 370,
+   "width": 250,
+   "height": 64,
+   "label": "3 查路由",
+   "sublabel": "dshsa-routes → cellId",
+   "fill": "#fff7ed",
+   "stroke": "#f97316",
+   "flat": true
+  },
+  {
+   "id": "enqueue",
+   "kind": "rect",
+   "x": 40,
+   "y": 480,
+   "width": 250,
+   "height": 64,
+   "label": "4 投递 cell 队列",
+   "sublabel": "SQS FIFO · source.event",
+   "fill": "#fff7ed",
+   "stroke": "#f97316",
+   "flat": true
+  },
+  {
+   "id": "ignore",
+   "kind": "rect",
+   "x": 40,
+   "y": 590,
+   "width": 250,
+   "height": 64,
+   "label": "忽略",
+   "sublabel": "记录原因 · 可选提示",
+   "fill": "#f8fafc",
+   "stroke": "#64748b",
+   "flat": true
+  },
+  {
+   "id": "norm",
+   "kind": "rect",
+   "x": 350,
+   "y": 150,
+   "width": 250,
+   "height": 64,
+   "label": "5 规范化",
+   "sublabel": "SourceKind → Trigger",
+   "fill": "#fef2f2",
+   "stroke": "#dc2626",
+   "flat": true
+  },
+  {
+   "id": "gate",
+   "kind": "rect",
+   "x": 350,
+   "y": 260,
+   "width": 250,
+   "height": 64,
+   "label": "6 Policy 闸门",
+   "sublabel": "发送者 · 提及 · 准入表",
+   "fill": "#fef2f2",
+   "stroke": "#dc2626",
+   "flat": true
+  },
+  {
+   "id": "assess",
+   "kind": "rect",
+   "x": 350,
+   "y": 370,
+   "width": 250,
+   "height": 64,
+   "label": "7 Assessor 评估",
+   "sublabel": "Bedrock → Decision",
+   "fill": "#fef2f2",
+   "stroke": "#dc2626",
+   "flat": true
+  },
+  {
+   "id": "ticket",
+   "kind": "rect",
+   "x": 350,
+   "y": 480,
+   "width": 250,
+   "height": 64,
+   "label": "8 创建 Ticket",
+   "sublabel": "Mandate · Assignment · 订阅",
+   "fill": "#fef2f2",
+   "stroke": "#dc2626",
+   "flat": true
+  },
+  {
+   "id": "exec",
+   "kind": "rect",
+   "x": 350,
+   "y": 590,
+   "width": 250,
+   "height": 64,
+   "label": "9 Executor 启动",
+   "sublabel": "创建 AP · 签 token · start",
+   "fill": "#fef2f2",
+   "stroke": "#dc2626",
+   "flat": true
+  },
+  {
+   "id": "mount",
+   "kind": "rect",
+   "x": 660,
+   "y": 150,
+   "width": 250,
+   "height": 64,
+   "label": "10 挂载工作区",
+   "sublabel": "broker 凭证 · 本 Ticket 的 AP",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "ack",
+   "kind": "rect",
+   "x": 660,
+   "y": 260,
+   "width": 250,
+   "height": 64,
+   "label": "11 确认收到",
+   "sublabel": "ack → 原 Thread",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "work",
+   "kind": "rect",
+   "x": 660,
+   "y": 370,
+   "width": 250,
+   "height": 64,
+   "label": "12 实现与验证",
+   "sublabel": "读原始上下文 · 改代码 · 测试",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "pr",
+   "kind": "rect",
+   "x": 660,
+   "y": 480,
+   "width": 250,
+   "height": 64,
+   "label": "13 推送并开 PR",
+   "sublabel": "分支 agent/<ticket 名>",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "report",
+   "kind": "rect",
+   "x": 660,
+   "y": 590,
+   "width": 250,
+   "height": 64,
+   "label": "14 上报结果",
+   "sublabel": "report ready / blocked",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "wapi",
+   "kind": "rect",
+   "x": 970,
+   "y": 590,
+   "width": 250,
+   "height": 64,
+   "label": "15 worker-api",
+   "sublabel": "校验 token · worker.event",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "engine",
+   "kind": "rect",
+   "x": 970,
+   "y": 480,
+   "width": 250,
+   "height": 64,
+   "label": "16 Engine.report",
+   "sublabel": "更新 Ticket 状态",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "reply",
+   "kind": "rect",
+   "x": 970,
+   "y": 370,
+   "width": 250,
+   "height": 64,
+   "label": "17 Replier 撰写",
+   "sublabel": "Bedrock · 简短交付通知",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "outbox",
+   "kind": "rect",
+   "x": 970,
+   "y": 260,
+   "width": 250,
+   "height": 64,
+   "label": "18 Outbox 发送",
+   "sublabel": "GitHub / 飞书 API",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "done",
+   "kind": "user_avatar",
+   "x": 970,
+   "y": 150,
+   "width": 250,
+   "height": 64,
+   "label": "19 回到原 Thread",
+   "sublabel": "PR 链接 · 待评审",
+   "fill": "#eff6ff",
+   "stroke": "#3b82f6",
+   "flat": true
+  }
+ ],
+ "arrows": [
+  {
+   "id": "e1",
+   "source": "msg",
+   "target": "verify",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "data"
+  },
+  {
+   "id": "e2",
+   "source": "verify",
+   "target": "route",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "data"
+  },
+  {
+   "id": "e3",
+   "source": "route",
+   "target": "enqueue",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "data"
+  },
+  {
+   "id": "e4",
+   "source": "enqueue",
+   "target": "norm",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "data",
+   "route_points": [
+    [
+     320,
+     512
+    ],
+    [
+     320,
+     182
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "source": "norm",
+   "target": "gate",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "control"
+  },
+  {
+   "id": "e6",
+   "source": "gate",
+   "target": "assess",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "control",
+   "label": "准入"
+  },
+  {
+   "id": "e7",
+   "source": "assess",
+   "target": "ticket",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "control",
+   "label": "accept"
+  },
+  {
+   "id": "e7i",
+   "source": "assess",
+   "target": "ignore",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "control",
+   "dashed": true,
+   "label": "ignore",
+   "route_points": [
+    [
+     334,
+     402
+    ],
+    [
+     334,
+     622
+    ]
+   ]
+  },
+  {
+   "id": "e8",
+   "source": "ticket",
+   "target": "exec",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "control"
+  },
+  {
+   "id": "e9",
+   "source": "exec",
+   "target": "mount",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "control",
+   "label": "start",
+   "route_points": [
+    [
+     630,
+     622
+    ],
+    [
+     630,
+     182
+    ]
+   ]
+  },
+  {
+   "id": "e10",
+   "source": "mount",
+   "target": "ack",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "write"
+  },
+  {
+   "id": "e11",
+   "source": "ack",
+   "target": "work",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "write"
+  },
+  {
+   "id": "e12",
+   "source": "work",
+   "target": "pr",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "write"
+  },
+  {
+   "id": "e13",
+   "source": "pr",
+   "target": "report",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "write"
+  },
+  {
+   "id": "e14",
+   "source": "report",
+   "target": "wapi",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "data"
+  },
+  {
+   "id": "e15",
+   "source": "wapi",
+   "target": "engine",
+   "source_port": "top",
+   "target_port": "bottom",
+   "flow": "data"
+  },
+  {
+   "id": "e16",
+   "source": "engine",
+   "target": "reply",
+   "source_port": "top",
+   "target_port": "bottom",
+   "flow": "data"
+  },
+  {
+   "id": "e17",
+   "source": "reply",
+   "target": "outbox",
+   "source_port": "top",
+   "target_port": "bottom",
+   "flow": "data"
+  },
+  {
+   "id": "e18",
+   "source": "outbox",
+   "target": "done",
+   "source_port": "top",
+   "target_port": "bottom",
+   "flow": "data"
+  }
+ ],
+ "legend_orientation": "horizontal",
+ "legend_x": 40,
+ "legend_y": 730,
+ "legend_locked": true,
+ "legend": [
+  {
+   "flow": "data",
+   "label": "消息与事件"
+  },
+  {
+   "flow": "control",
+   "label": "cell 内决策"
+  },
+  {
+   "flow": "write",
+   "label": "worker 步骤"
+  }
+ ],
+ "footer": "追问消息直接投递给已订阅的 Ticket（deliver），不再走 Assessor；Policy 闸门拒绝的消息记为 trigger not admitted。",
+ "footer_x": 40,
+ "footer_y": 780
+}
