@@ -1,0 +1,469 @@
+{
+ "schema_version": 1,
+ "mode": "architecture",
+ "template_type": "architecture",
+ "style": 10,
+ "semantic_profile": "cloud-fabric",
+ "diagram_type": "deployment",
+ "platform_profile": "aws",
+ "deployment_mode": "单区域 · 单 NAT",
+ "icon_manifest_version": "2026.07-neutral.1",
+ "quality_profile": "standard",
+ "text_policy": "strict",
+ "width": 1200,
+ "height": 1130,
+ "title": "dshsa 基础设施部署图",
+ "subtitle": "一个账号、一个区域、一个 VPC（10.40.0.0/16，私有子网 + 单 NAT）；资源名统一以 dshsa- 开头",
+ "containers": [
+  {
+   "id": "global",
+   "deployment_kind": "global",
+   "x": 30,
+   "y": 90,
+   "width": 1140,
+   "height": 136,
+   "label": "外部服务"
+  },
+  {
+   "id": "region",
+   "deployment_kind": "region",
+   "x": 30,
+   "y": 256,
+   "width": 1140,
+   "height": 766,
+   "label": "ap-northeast-1"
+  },
+  {
+   "id": "vpc",
+   "deployment_kind": "network",
+   "parent": "region",
+   "x": 50,
+   "y": 400,
+   "width": 1100,
+   "height": 290,
+   "label": "dshsa-vpc"
+  },
+  {
+   "id": "managed",
+   "deployment_kind": "service",
+   "parent": "region",
+   "x": 50,
+   "y": 740,
+   "width": 1100,
+   "height": 256,
+   "label": "区域托管服务"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "github",
+   "kind": "cloud_service",
+   "deployment_kind": "edge",
+   "deployment_id": "global",
+   "icon_id": "generic:traffic",
+   "provider": "GitHub",
+   "x": 70,
+   "y": 134,
+   "width": 220,
+   "height": 72,
+   "label": "GitHub",
+   "sublabel": "webhook · REST API"
+  },
+  {
+   "id": "feishu",
+   "kind": "cloud_service",
+   "deployment_kind": "edge",
+   "deployment_id": "global",
+   "icon_id": "generic:traffic",
+   "provider": "Feishu",
+   "x": 350,
+   "y": 134,
+   "width": 220,
+   "height": 72,
+   "label": "飞书 / Lark 开放平台",
+   "sublabel": "长连接 · OpenAPI"
+  },
+  {
+   "id": "cdn",
+   "kind": "cloud_service",
+   "deployment_kind": "edge",
+   "deployment_id": "global",
+   "icon_id": "generic:traffic",
+   "provider": "AWS",
+   "x": 910,
+   "y": 134,
+   "width": 220,
+   "height": 72,
+   "label": "CloudFront",
+   "sublabel": "面板 SPA · OAC"
+  },
+  {
+   "id": "ingress",
+   "kind": "cloud_service",
+   "deployment_kind": "gateway",
+   "deployment_id": "region",
+   "icon_id": "generic:gateway",
+   "provider": "AWS",
+   "x": 70,
+   "y": 300,
+   "width": 220,
+   "height": 72,
+   "label": "dshsa-ingress",
+   "sublabel": "HTTP API + webhook Lambda"
+  },
+  {
+   "id": "panelgw",
+   "kind": "cloud_service",
+   "deployment_kind": "gateway",
+   "deployment_id": "region",
+   "icon_id": "generic:gateway",
+   "provider": "AWS",
+   "x": 910,
+   "y": 300,
+   "width": 220,
+   "height": 72,
+   "label": "panel HTTP API",
+   "sublabel": "Cognito JWT 授权器"
+  },
+  {
+   "id": "nat",
+   "kind": "cloud_service",
+   "deployment_kind": "gateway",
+   "deployment_id": "vpc",
+   "icon_id": "generic:gateway",
+   "provider": "AWS",
+   "x": 350,
+   "y": 450,
+   "width": 220,
+   "height": 72,
+   "label": "NAT 网关",
+   "sublabel": "公有子网 · 出站"
+  },
+  {
+   "id": "host",
+   "kind": "cloud_service",
+   "deployment_kind": "compute",
+   "deployment_id": "vpc",
+   "icon_id": "generic:compute",
+   "provider": "AWS",
+   "x": 630,
+   "y": 450,
+   "width": 220,
+   "height": 72,
+   "label": "ECS Fargate dshsa-host",
+   "sublabel": "arm64 · cell + Connector"
+  },
+  {
+   "id": "panelapi",
+   "kind": "cloud_service",
+   "deployment_kind": "compute",
+   "deployment_id": "vpc",
+   "icon_id": "generic:compute",
+   "provider": "AWS",
+   "x": 910,
+   "y": 450,
+   "width": 220,
+   "height": 72,
+   "label": "panel-api Lambda",
+   "sublabel": "查租约 · 转发"
+  },
+  {
+   "id": "workerapi",
+   "kind": "cloud_service",
+   "deployment_kind": "gateway",
+   "deployment_id": "vpc",
+   "icon_id": "generic:gateway",
+   "provider": "AWS",
+   "x": 350,
+   "y": 590,
+   "width": 220,
+   "height": 72,
+   "label": "worker-api Lambda",
+   "sublabel": "私有 API · 接口端点"
+  },
+  {
+   "id": "runtime",
+   "kind": "cloud_service",
+   "deployment_kind": "compute",
+   "deployment_id": "vpc",
+   "icon_id": "generic:compute",
+   "provider": "AWS",
+   "x": 630,
+   "y": 590,
+   "width": 220,
+   "height": 72,
+   "label": "AgentCore Runtime",
+   "sublabel": "每 Ticket 一个 microVM"
+  },
+  {
+   "id": "mt",
+   "kind": "cloud_service",
+   "deployment_kind": "database",
+   "deployment_id": "vpc",
+   "icon_id": "generic:database",
+   "provider": "AWS",
+   "x": 910,
+   "y": 590,
+   "width": 220,
+   "height": 72,
+   "label": "S3 Files 挂载目标",
+   "sublabel": "每个私有子网一个 · NFS"
+  },
+  {
+   "id": "sqs",
+   "kind": "cloud_service",
+   "deployment_kind": "stream",
+   "deployment_id": "managed",
+   "icon_id": "generic:stream",
+   "provider": "AWS",
+   "x": 70,
+   "y": 790,
+   "width": 220,
+   "height": 72,
+   "label": "SQS FIFO",
+   "sublabel": "每 cell 一个队列"
+  },
+  {
+   "id": "ddb",
+   "kind": "cloud_service",
+   "deployment_kind": "database",
+   "deployment_id": "managed",
+   "icon_id": "generic:database",
+   "provider": "AWS",
+   "x": 350,
+   "y": 790,
+   "width": 220,
+   "height": 72,
+   "label": "DynamoDB",
+   "sublabel": "租户 · cell · 路由 · 租约等"
+  },
+  {
+   "id": "s3",
+   "kind": "cloud_service",
+   "deployment_kind": "database",
+   "deployment_id": "managed",
+   "icon_id": "generic:database",
+   "provider": "AWS",
+   "x": 630,
+   "y": 790,
+   "width": 220,
+   "height": 72,
+   "label": "S3 桶",
+   "sublabel": "data · state · panel"
+  },
+  {
+   "id": "s3files",
+   "kind": "cloud_service",
+   "deployment_kind": "database",
+   "deployment_id": "managed",
+   "icon_id": "generic:database",
+   "provider": "AWS",
+   "x": 910,
+   "y": 790,
+   "width": 220,
+   "height": 72,
+   "label": "S3 Files 文件系统",
+   "sublabel": "每 Ticket 一个访问点"
+  },
+  {
+   "id": "lambdas",
+   "kind": "cloud_service",
+   "deployment_kind": "compute",
+   "deployment_id": "managed",
+   "icon_id": "generic:compute",
+   "provider": "AWS",
+   "x": 70,
+   "y": 890,
+   "width": 220,
+   "height": 72,
+   "label": "broker / provisioner",
+   "sublabel": "Python Lambda"
+  },
+  {
+   "id": "kms",
+   "kind": "cloud_service",
+   "deployment_kind": "gateway",
+   "deployment_id": "managed",
+   "icon_id": "generic:gateway",
+   "provider": "AWS",
+   "x": 350,
+   "y": 890,
+   "width": 220,
+   "height": 72,
+   "label": "KMS + Secrets Manager",
+   "sublabel": "token 签名 · App 密钥"
+  },
+  {
+   "id": "bedrock",
+   "kind": "cloud_service",
+   "deployment_kind": "compute",
+   "deployment_id": "managed",
+   "icon_id": "generic:compute",
+   "provider": "AWS",
+   "x": 630,
+   "y": 890,
+   "width": 220,
+   "height": 72,
+   "label": "Amazon Bedrock",
+   "sublabel": "global.* 推理配置文件"
+  },
+  {
+   "id": "logs",
+   "kind": "cloud_service",
+   "deployment_kind": "observability",
+   "deployment_id": "managed",
+   "icon_id": "generic:observability",
+   "provider": "AWS",
+   "x": 910,
+   "y": 890,
+   "width": 220,
+   "height": 72,
+   "label": "CloudWatch Logs",
+   "sublabel": "/dshsa/host 等日志组"
+  }
+ ],
+ "arrows": [
+  {
+   "id": "e-webhook",
+   "source": "github",
+   "target": "ingress",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "read",
+   "via": "HTTPS webhook"
+  },
+  {
+   "id": "e-cdn",
+   "source": "cdn",
+   "target": "panelgw",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "read",
+   "via": "HTTPS"
+  },
+  {
+   "id": "e-ws",
+   "source": "nat",
+   "target": "feishu",
+   "source_port": "top",
+   "target_port": "bottom",
+   "flow": "read",
+   "via": "出站 WebSocket"
+  },
+  {
+   "id": "e-ingress-sqs",
+   "source": "ingress",
+   "target": "sqs",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "write",
+   "via": "SendMessage"
+  },
+  {
+   "id": "e-panel",
+   "source": "panelgw",
+   "target": "panelapi",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "read",
+   "via": "Lambda 集成"
+  },
+  {
+   "id": "e-internal",
+   "source": "panelapi",
+   "target": "host",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "read",
+   "label": ":8080"
+  },
+  {
+   "id": "e-egress",
+   "source": "host",
+   "target": "nat",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "read"
+  },
+  {
+   "id": "e-invoke",
+   "source": "host",
+   "target": "runtime",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "write",
+   "label": "Invoke"
+  },
+  {
+   "id": "e-nfs",
+   "source": "runtime",
+   "target": "mt",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "data",
+   "label": "NFS"
+  },
+  {
+   "id": "e-cp",
+   "source": "runtime",
+   "target": "workerapi",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "write",
+   "label": "VPCE"
+  },
+  {
+   "id": "e-wapi-sqs",
+   "source": "workerapi",
+   "target": "sqs",
+   "source_port": "bottom",
+   "target_port": "right",
+   "flow": "write",
+   "via": "SendMessage",
+   "route_points": [
+    [
+     460,
+     715
+    ],
+    [
+     320,
+     715
+    ],
+    [
+     320,
+     826
+    ]
+   ]
+  },
+  {
+   "id": "e-sync",
+   "source": "mt",
+   "target": "s3files",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "data",
+   "via": "S3 Files"
+  }
+ ],
+ "legend_orientation": "horizontal",
+ "legend_x": 48,
+ "legend_y": 1050,
+ "legend_locked": true,
+ "legend": [
+  {
+   "flow": "read",
+   "label": "入站 / 出站流量"
+  },
+  {
+   "flow": "write",
+   "label": "写入与调用"
+  },
+  {
+   "flow": "data",
+   "label": "存储"
+  }
+ ],
+ "footer": "S3、DynamoDB 走网关端点；worker-api 只能经 execute-api 接口端点访问。没有公网监听器，也没有公开桶。",
+ "footer_x": 48,
+ "footer_y": 1105
+}

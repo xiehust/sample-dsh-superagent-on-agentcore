@@ -1,0 +1,339 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1130" width="1200" height="1130" data-generator="fireworks-tech-graph" data-schema-version="1" data-text-metrics="heuristic-v1" data-style-id="10" data-visual-theme="Cloud Fabric" data-diagram-type="deployment" data-motion-scene="" data-semantic-profile="cloud-fabric" data-semantic-valid="true" data-quality-profile="standard" data-max-bends-per-edge="12" data-max-total-bends="100" data-max-route-stretch="5.0" data-max-bridged-crossings="8" data-min-node-gap="0.0" data-min-container-gutter="0.0" data-min-label-clearance="2.0" data-min-segment-length="0.0">
+  <defs>
+    <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/>
+    </marker>
+    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0891b2"/>
+    </marker>
+    <marker id="arrowE" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+    <marker id="arrowF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#db2777"/>
+    </marker>
+    <marker id="arrowH" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <filter id="shadowSoft" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadowGlass" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.28"/>
+    </filter>
+    <linearGradient id="cloudGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fcff"/>
+      <stop offset="100%" stop-color="#dfedf7"/>
+    </linearGradient>
+    <pattern id="cloudGrid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#7fa3c2" stroke-opacity="0.10" stroke-width="1"/>
+    </pattern>
+    <style>
+    text { font-family: Inter, 'Helvetica Neue', 'Segoe UI', 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif; }
+    .title { font-size: 27px; font-weight: 700; fill: #102a43; }
+    .subtitle { font-size: 13px; font-weight: 500; fill: #52718d; }
+    .section { font-size: 13px; font-weight: 700; fill: #315d7e; letter-spacing: 1.4px; }
+    .section-sub { font-size: 12px; font-weight: 500; fill: #4b6680; }
+    .node-title { font-weight: 700; fill: #102a43; }
+    .node-sub { font-weight: 500; fill: #486581; }
+    .node-type { font-size: 10px; font-weight: 700; fill: #4b6680; letter-spacing: 0.08em; }
+    .arrow-label { font-size: 12px; font-weight: 600; fill: #334e68; }
+    .legend { font-size: 12px; font-weight: 500; fill: #486581; }
+    .footnote { font-size: 12px; font-weight: 500; fill: #4b6680; }
+    .metric-label { font-size: 8.5px; font-weight: 700; fill: #4b6680; text-transform: uppercase; }
+    .metric-value { font-size: 9.5px; font-weight: 700; fill: #102a43; }
+    </style>
+  </defs>
+  <rect data-graph-role="background" width="1200.0" height="1130.0" fill="url(#cloudGradient)"/>
+  <rect data-graph-role="decoration" width="1200.0" height="1130.0" fill="url(#cloudGrid)"/>
+  <text x="48.0" y="48" text-anchor="start" class="title">dshsa 基础设施部署图</text>
+  <text x="48.0" y="72" text-anchor="start" class="subtitle">一个账号、一个区域、一个 VPC（10.40.0.0/16，私有子网 + 单 NAT）；资源名统一以 dshsa- 开头</text>
+  <g id="style-signature" data-graph-role="decoration" data-style-signature="cloud-ownership-map">
+    <rect x="976.0" y="22.0" width="176.0" height="34.0" rx="9" fill="#ffffff" fill-opacity="0.82" stroke="#7fa3c2" stroke-width="1.1"/>
+    <rect x="987.0" y="31.0" width="14" height="14" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+    <rect x="996.0" y="35.0" width="14" height="14" rx="4" fill="#dcfce7" stroke="#059669" stroke-width="1"/>
+    <text data-full-text="AWS · 1 REGIONS" x="1019.0" y="36.0" font-size="8.5" font-weight="800" fill="#315d7e">AWS · 1 REGIONS</text>
+    <text data-full-text="单区域 · 单 NAT" x="1019.0" y="49.0" font-size="8" font-weight="700" fill="#52718d">单区域 · 单 NAT</text>
+  </g>
+  <g id="global" data-graph-role="container" data-container-id="global" data-semantic-role="global" data-graph-bounds="30,90,1170,226">
+  <rect data-graph-role="container" x="30.0" y="90.0" width="1140.0" height="136.0" rx="16.0" fill="rgba(255,255,255,0.54)" stroke="#7fa3c2" stroke-width="1.4" stroke-dasharray="7 5"/>
+  <rect data-graph-role="decoration" x="1102.0" y="100.0" width="54.0" height="18" rx="9" fill="#dbeafe" stroke="#93c5fd" stroke-width="0.8"/>
+  <text data-graph-role="decoration" x="1129.0" y="112.5" text-anchor="middle" font-size="9" font-weight="700" fill="#315d7e">GLOBAL</text>
+  <line data-graph-role="decoration" x1="38.0" y1="132.0" x2="38.0" y2="212.0" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" opacity="0.72"/>
+  <text x="48.0" y="114.0" class="section">外部服务</text>
+    <rect id="global-header" data-graph-role="reserved" data-reserved-kind="container-header" x="38" y="96" width="82" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="region" data-graph-role="container" data-container-id="region" data-semantic-role="region" data-graph-bounds="30,256,1170,1022">
+  <rect data-graph-role="container" x="30.0" y="256.0" width="1140.0" height="766.0" rx="16.0" fill="rgba(255,255,255,0.54)" stroke="#7fa3c2" stroke-width="1.4" stroke-dasharray="7 5"/>
+  <rect data-graph-role="decoration" x="1102.0" y="266.0" width="54.0" height="18" rx="9" fill="#dbeafe" stroke="#93c5fd" stroke-width="0.8"/>
+  <text data-graph-role="decoration" x="1129.0" y="278.5" text-anchor="middle" font-size="9" font-weight="700" fill="#315d7e">REGION</text>
+  <line data-graph-role="decoration" x1="38.0" y1="298.0" x2="38.0" y2="1008.0" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round" opacity="0.72"/>
+  <text x="48.0" y="280.0" class="section">AP-NORTHEAST-1</text>
+    <rect id="region-header" data-graph-role="reserved" data-reserved-kind="container-header" x="38" y="262" width="135.56" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="vpc" data-graph-role="container" data-container-id="vpc" data-semantic-role="network" data-graph-bounds="50,400,1150,690">
+  <rect data-graph-role="container" x="50.0" y="400.0" width="1100.0" height="290.0" rx="16.0" fill="rgba(255,255,255,0.54)" stroke="#7fa3c2" stroke-width="1.4" stroke-dasharray="7 5"/>
+  <rect data-graph-role="decoration" x="1081.46" y="410.0" width="54.54" height="18" rx="9" fill="#dbeafe" stroke="#93c5fd" stroke-width="0.8"/>
+  <text data-graph-role="decoration" x="1108.73" y="422.5" text-anchor="middle" font-size="9" font-weight="700" fill="#315d7e">NETWORK</text>
+  <line data-graph-role="decoration" x1="58.0" y1="442.0" x2="58.0" y2="676.0" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round" opacity="0.72"/>
+  <text x="68.0" y="424.0" class="section">DSHSA-VPC</text>
+    <rect id="vpc-header" data-graph-role="reserved" data-reserved-kind="container-header" x="58" y="406" width="97.86" height="30" fill="none" stroke="none"/>
+  </g>
+  <g id="managed" data-graph-role="container" data-container-id="managed" data-semantic-role="service" data-graph-bounds="50,740,1150,996">
+  <rect data-graph-role="container" x="50.0" y="740.0" width="1100.0" height="256.0" rx="16.0" fill="rgba(255,255,255,0.54)" stroke="#7fa3c2" stroke-width="1.4" stroke-dasharray="7 5"/>
+  <rect data-graph-role="decoration" x="1082.0" y="750.0" width="54.0" height="18" rx="9" fill="#dbeafe" stroke="#93c5fd" stroke-width="0.8"/>
+  <text data-graph-role="decoration" x="1109.0" y="762.5" text-anchor="middle" font-size="9" font-weight="700" fill="#315d7e">SERVICE</text>
+  <line data-graph-role="decoration" x1="58.0" y1="782.0" x2="58.0" y2="982.0" stroke="#7fa3c2" stroke-width="2.2" stroke-linecap="round" opacity="0.72"/>
+  <text x="68.0" y="764.0" class="section">区域托管服务</text>
+    <rect id="managed-header" data-graph-role="reserved" data-reserved-kind="container-header" x="58" y="746" width="108" height="30" fill="none" stroke="none"/>
+  </g>
+  <path id="e-wapi-sqs" data-graph-role="edge" data-edge-id="e-wapi-sqs" data-source="workerapi" data-target="sqs" data-edge-kind="flow" data-topic-id="" data-flow="write" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="SendMessage" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="3" data-route-stretch="1.0" data-bridges="" d="M 460,662 L 460,715 L 320,715 L 320,826 L 290,826" fill="none" stroke="#ea580c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowB)"/>
+  <path id="e-webhook" data-graph-role="edge" data-edge-id="e-webhook" data-source="github" data-target="ingress" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="HTTPS webhook" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 180,206 L 180,300" fill="none" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="e-cdn" data-graph-role="edge" data-edge-id="e-cdn" data-source="cdn" data-target="panelgw" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="HTTPS" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 1020,206 L 1020,300" fill="none" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="e-ws" data-graph-role="edge" data-edge-id="e-ws" data-source="nat" data-target="feishu" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="出站 WebSocket" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 460,450 L 460,206" fill="none" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="e-ingress-sqs" data-graph-role="edge" data-edge-id="e-ingress-sqs" data-source="ingress" data-target="sqs" data-edge-kind="flow" data-topic-id="" data-flow="write" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="SendMessage" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 180,372 L 180,790" fill="none" stroke="#ea580c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowB)"/>
+  <path id="e-panel" data-graph-role="edge" data-edge-id="e-panel" data-source="panelgw" data-target="panelapi" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="Lambda 集成" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 1020,372 L 1020,450" fill="none" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="e-internal" data-graph-role="edge" data-edge-id="e-internal" data-source="panelapi" data-target="host" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 910,486 L 850,486" fill="none" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="e-egress" data-graph-role="edge" data-edge-id="e-egress" data-source="host" data-target="nat" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 630,486 L 570,486" fill="none" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="e-invoke" data-graph-role="edge" data-edge-id="e-invoke" data-source="host" data-target="runtime" data-edge-kind="flow" data-topic-id="" data-flow="write" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 740,522 L 740,590" fill="none" stroke="#ea580c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowB)"/>
+  <path id="e-nfs" data-graph-role="edge" data-edge-id="e-nfs" data-source="runtime" data-target="mt" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 850,626 L 910,626" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="e-cp" data-graph-role="edge" data-edge-id="e-cp" data-source="runtime" data-target="workerapi" data-edge-kind="flow" data-topic-id="" data-flow="write" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 630,626 L 570,626" fill="none" stroke="#ea580c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowB)"/>
+  <path id="e-sync" data-graph-role="edge" data-edge-id="e-sync" data-source="mt" data-target="s3files" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="S3 Files" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 1020,662 L 1020,790" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <g id="node-github" data-graph-role="node" data-node-id="github" data-semantic-role="edge" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="global" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,134,290,206">
+  <rect x="70.0" y="134.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="82.0" y="149.0" width="42.0" height="42.0" rx="11" fill="#2563eb" opacity="0.12" stroke="#2563eb" stroke-width="1.2"/>
+  <circle cx="103.0" cy="170.0" r="11" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 92.0 170.0 H 114.0 M 103.0 159.0 C 97.0 165.0 97.0 175.0 103.0 181.0 M 103.0 159.0 C 109.0 165.0 109.0 175.0 103.0 181.0" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="GitHub" x="136.0" y="165.0" text-anchor="start" class="node-title" font-size="13.5">GitHub</text>
+  <text data-text-role="subtitle" data-full-text="webhook · REST API" x="136.0" y="184.0" text-anchor="start" class="node-sub" font-size="11.5">webhook · REST API</text>
+  <text x="280.0" y="148.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">GITHUB</text>
+  </g>
+  <g id="node-feishu" data-graph-role="node" data-node-id="feishu" data-semantic-role="edge" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="global" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="350,134,570,206">
+  <rect x="350.0" y="134.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="362.0" y="149.0" width="42.0" height="42.0" rx="11" fill="#2563eb" opacity="0.12" stroke="#2563eb" stroke-width="1.2"/>
+  <circle cx="383.0" cy="170.0" r="11" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 372.0 170.0 H 394.0 M 383.0 159.0 C 377.0 165.0 377.0 175.0 383.0 181.0 M 383.0 159.0 C 389.0 165.0 389.0 175.0 383.0 181.0" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="飞书 / Lark 开放平台" x="416.0" y="165.0" text-anchor="start" class="node-title" font-size="13.17">飞书 / Lark 开放平台</text>
+  <text data-text-role="subtitle" data-full-text="长连接 · OpenAPI" x="416.0" y="184.0" text-anchor="start" class="node-sub" font-size="11.5">长连接 · OpenAPI</text>
+  <text x="560.0" y="148.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">FEISHU</text>
+  </g>
+  <g id="node-cdn" data-graph-role="node" data-node-id="cdn" data-semantic-role="edge" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="global" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="910,134,1130,206">
+  <rect x="910.0" y="134.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="922.0" y="149.0" width="42.0" height="42.0" rx="11" fill="#2563eb" opacity="0.12" stroke="#2563eb" stroke-width="1.2"/>
+  <circle cx="943.0" cy="170.0" r="11" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 932.0 170.0 H 954.0 M 943.0 159.0 C 937.0 165.0 937.0 175.0 943.0 181.0 M 943.0 159.0 C 949.0 165.0 949.0 175.0 943.0 181.0" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="CloudFront" x="976.0" y="165.0" text-anchor="start" class="node-title" font-size="13.5">CloudFront</text>
+  <text data-text-role="subtitle" data-full-text="面板 SPA · OAC" x="976.0" y="184.0" text-anchor="start" class="node-sub" font-size="11.5">面板 SPA · OAC</text>
+  <text x="1120.0" y="148.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-ingress" data-graph-role="node" data-node-id="ingress" data-semantic-role="gateway" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="region" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,300,290,372">
+  <rect x="70.0" y="300.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="82.0" y="315.0" width="42.0" height="42.0" rx="11" fill="#7c3aed" opacity="0.12" stroke="#7c3aed" stroke-width="1.2"/>
+  <path d="M 103.0 324.0 L 115.0 336.0 L 103.0 348.0 L 91.0 336.0 Z" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 97.0 336.0 H 109.0 M 106.0 333.0 L 109.0 336.0 L 106.0 339.0" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="dshsa-ingress" x="136.0" y="331.0" text-anchor="start" class="node-title" font-size="13.5">dshsa-ingress</text>
+  <text data-text-role="subtitle" data-full-text="HTTP API + webhook Lambda" x="136.0" y="350.0" text-anchor="start" class="node-sub" font-size="9.84">HTTP API + webhook Lambda</text>
+  <text x="280.0" y="314.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-panelgw" data-graph-role="node" data-node-id="panelgw" data-semantic-role="gateway" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="region" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="910,300,1130,372">
+  <rect x="910.0" y="300.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="922.0" y="315.0" width="42.0" height="42.0" rx="11" fill="#7c3aed" opacity="0.12" stroke="#7c3aed" stroke-width="1.2"/>
+  <path d="M 943.0 324.0 L 955.0 336.0 L 943.0 348.0 L 931.0 336.0 Z" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 937.0 336.0 H 949.0 M 946.0 333.0 L 949.0 336.0 L 946.0 339.0" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="panel HTTP API" x="976.0" y="331.0" text-anchor="start" class="node-title" font-size="13.5">panel HTTP API</text>
+  <text data-text-role="subtitle" data-full-text="Cognito JWT 授权器" x="976.0" y="350.0" text-anchor="start" class="node-sub" font-size="11.5">Cognito JWT 授权器</text>
+  <text x="1120.0" y="314.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-nat" data-graph-role="node" data-node-id="nat" data-semantic-role="gateway" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="vpc" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="350,450,570,522">
+  <rect x="350.0" y="450.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="362.0" y="465.0" width="42.0" height="42.0" rx="11" fill="#7c3aed" opacity="0.12" stroke="#7c3aed" stroke-width="1.2"/>
+  <path d="M 383.0 474.0 L 395.0 486.0 L 383.0 498.0 L 371.0 486.0 Z" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 377.0 486.0 H 389.0 M 386.0 483.0 L 389.0 486.0 L 386.0 489.0" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="NAT 网关" x="416.0" y="481.0" text-anchor="start" class="node-title" font-size="13.5">NAT 网关</text>
+  <text data-text-role="subtitle" data-full-text="公有子网 · 出站" x="416.0" y="500.0" text-anchor="start" class="node-sub" font-size="11.5">公有子网 · 出站</text>
+  <text x="560.0" y="464.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-host" data-graph-role="node" data-node-id="host" data-semantic-role="compute" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="vpc" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="630,450,850,522">
+  <rect x="630.0" y="450.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="642.0" y="465.0" width="42.0" height="42.0" rx="11" fill="#059669" opacity="0.12" stroke="#059669" stroke-width="1.2"/>
+  <rect x="652.0" y="477.0" width="22" height="18" rx="4" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 657.0 483.0 H 669.0 M 657.0 489.0 H 666.0" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="ECS Fargate dshsa-host" x="696.0" y="481.0" text-anchor="start" class="node-title" font-size="10.67">ECS Fargate dshsa-host</text>
+  <text data-text-role="subtitle" data-full-text="arm64 · cell + Connector" x="696.0" y="500.0" text-anchor="start" class="node-sub" font-size="10.5">arm64 · cell + Connector</text>
+  <text x="840.0" y="464.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-panelapi" data-graph-role="node" data-node-id="panelapi" data-semantic-role="compute" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="vpc" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="910,450,1130,522">
+  <rect x="910.0" y="450.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="922.0" y="465.0" width="42.0" height="42.0" rx="11" fill="#059669" opacity="0.12" stroke="#059669" stroke-width="1.2"/>
+  <rect x="932.0" y="477.0" width="22" height="18" rx="4" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 937.0 483.0 H 949.0 M 937.0 489.0 H 946.0" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="panel-api Lambda" x="976.0" y="481.0" text-anchor="start" class="node-title" font-size="13.5">panel-api Lambda</text>
+  <text data-text-role="subtitle" data-full-text="查租约 · 转发" x="976.0" y="500.0" text-anchor="start" class="node-sub" font-size="11.5">查租约 · 转发</text>
+  <text x="1120.0" y="464.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-workerapi" data-graph-role="node" data-node-id="workerapi" data-semantic-role="gateway" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="vpc" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="350,590,570,662">
+  <rect x="350.0" y="590.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="362.0" y="605.0" width="42.0" height="42.0" rx="11" fill="#7c3aed" opacity="0.12" stroke="#7c3aed" stroke-width="1.2"/>
+  <path d="M 383.0 614.0 L 395.0 626.0 L 383.0 638.0 L 371.0 626.0 Z" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 377.0 626.0 H 389.0 M 386.0 623.0 L 389.0 626.0 L 386.0 629.0" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="worker-api Lambda" x="416.0" y="621.0" text-anchor="start" class="node-title" font-size="13.5">worker-api Lambda</text>
+  <text data-text-role="subtitle" data-full-text="私有 API · 接口端点" x="416.0" y="640.0" text-anchor="start" class="node-sub" font-size="11.5">私有 API · 接口端点</text>
+  <text x="560.0" y="604.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-runtime" data-graph-role="node" data-node-id="runtime" data-semantic-role="compute" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="vpc" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="630,590,850,662">
+  <rect x="630.0" y="590.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="642.0" y="605.0" width="42.0" height="42.0" rx="11" fill="#059669" opacity="0.12" stroke="#059669" stroke-width="1.2"/>
+  <rect x="652.0" y="617.0" width="22" height="18" rx="4" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 657.0 623.0 H 669.0 M 657.0 629.0 H 666.0" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="AgentCore Runtime" x="696.0" y="621.0" text-anchor="start" class="node-title" font-size="13.5">AgentCore Runtime</text>
+  <text data-text-role="subtitle" data-full-text="每 Ticket 一个 microVM" x="696.0" y="640.0" text-anchor="start" class="node-sub" font-size="11.5">每 Ticket 一个 microVM</text>
+  <text x="840.0" y="604.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-mt" data-graph-role="node" data-node-id="mt" data-semantic-role="database" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="vpc" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="910,590,1130,662">
+  <rect x="910.0" y="590.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="922.0" y="605.0" width="42.0" height="42.0" rx="11" fill="#ea580c" opacity="0.12" stroke="#ea580c" stroke-width="1.2"/>
+  <ellipse cx="943.0" cy="618.0" rx="11" ry="4" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 932.0 618.0 V 634.0 C 932.0 639.0 954.0 639.0 954.0 634.0 V 618.0" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 932.0 626.0 C 932.0 631.0 954.0 631.0 954.0 626.0" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="S3 Files 挂载目标" x="976.0" y="621.0" text-anchor="start" class="node-title" font-size="13.5">S3 Files 挂载目标</text>
+  <text data-text-role="subtitle" data-full-text="每个私有子网一个 · NFS" x="976.0" y="640.0" text-anchor="start" class="node-sub" font-size="11.5">每个私有子网一个 · NFS</text>
+  <text x="1120.0" y="604.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-sqs" data-graph-role="node" data-node-id="sqs" data-semantic-role="stream" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="managed" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,790,290,862">
+  <rect x="70.0" y="790.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="82.0" y="805.0" width="42.0" height="42.0" rx="11" fill="#db2777" opacity="0.12" stroke="#db2777" stroke-width="1.2"/>
+  <path d="M 91.0 819.0 H 108.0 M 98.0 826.0 H 115.0 M 91.0 833.0 H 108.0" fill="none" stroke="#db2777" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="111.0" cy="819.0" r="2.4" fill="#db2777"/><circle cx="95.0" cy="826.0" r="2.4" fill="#db2777"/><circle cx="111.0" cy="833.0" r="2.4" fill="#db2777"/>
+  <text data-text-role="title" data-full-text="SQS FIFO" x="136.0" y="821.0" text-anchor="start" class="node-title" font-size="13.5">SQS FIFO</text>
+  <text data-text-role="subtitle" data-full-text="每 cell 一个队列" x="136.0" y="840.0" text-anchor="start" class="node-sub" font-size="11.5">每 cell 一个队列</text>
+  <text x="280.0" y="804.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-ddb" data-graph-role="node" data-node-id="ddb" data-semantic-role="database" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="managed" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="350,790,570,862">
+  <rect x="350.0" y="790.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="362.0" y="805.0" width="42.0" height="42.0" rx="11" fill="#ea580c" opacity="0.12" stroke="#ea580c" stroke-width="1.2"/>
+  <ellipse cx="383.0" cy="818.0" rx="11" ry="4" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 372.0 818.0 V 834.0 C 372.0 839.0 394.0 839.0 394.0 834.0 V 818.0" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 372.0 826.0 C 372.0 831.0 394.0 831.0 394.0 826.0" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="DynamoDB" x="416.0" y="821.0" text-anchor="start" class="node-title" font-size="13.5">DynamoDB</text>
+  <text data-text-role="subtitle" data-full-text="租户 · cell · 路由 · 租约等" x="416.0" y="840.0" text-anchor="start" class="node-sub" font-size="10.35">租户 · cell · 路由 · 租约等</text>
+  <text x="560.0" y="804.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-s3" data-graph-role="node" data-node-id="s3" data-semantic-role="database" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="managed" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="630,790,850,862">
+  <rect x="630.0" y="790.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="642.0" y="805.0" width="42.0" height="42.0" rx="11" fill="#ea580c" opacity="0.12" stroke="#ea580c" stroke-width="1.2"/>
+  <ellipse cx="663.0" cy="818.0" rx="11" ry="4" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 652.0 818.0 V 834.0 C 652.0 839.0 674.0 839.0 674.0 834.0 V 818.0" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 652.0 826.0 C 652.0 831.0 674.0 831.0 674.0 826.0" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="S3 桶" x="696.0" y="821.0" text-anchor="start" class="node-title" font-size="13.5">S3 桶</text>
+  <text data-text-role="subtitle" data-full-text="data · state · panel" x="696.0" y="840.0" text-anchor="start" class="node-sub" font-size="11.5">data · state · panel</text>
+  <text x="840.0" y="804.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-s3files" data-graph-role="node" data-node-id="s3files" data-semantic-role="database" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="managed" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="910,790,1130,862">
+  <rect x="910.0" y="790.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="922.0" y="805.0" width="42.0" height="42.0" rx="11" fill="#ea580c" opacity="0.12" stroke="#ea580c" stroke-width="1.2"/>
+  <ellipse cx="943.0" cy="818.0" rx="11" ry="4" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 932.0 818.0 V 834.0 C 932.0 839.0 954.0 839.0 954.0 834.0 V 818.0" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 932.0 826.0 C 932.0 831.0 954.0 831.0 954.0 826.0" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="S3 Files 文件系统" x="976.0" y="821.0" text-anchor="start" class="node-title" font-size="13.5">S3 Files 文件系统</text>
+  <text data-text-role="subtitle" data-full-text="每 Ticket 一个访问点" x="976.0" y="840.0" text-anchor="start" class="node-sub" font-size="11.5">每 Ticket 一个访问点</text>
+  <text x="1120.0" y="804.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-lambdas" data-graph-role="node" data-node-id="lambdas" data-semantic-role="compute" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="managed" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="70,890,290,962">
+  <rect x="70.0" y="890.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="82.0" y="905.0" width="42.0" height="42.0" rx="11" fill="#059669" opacity="0.12" stroke="#059669" stroke-width="1.2"/>
+  <rect x="92.0" y="917.0" width="22" height="18" rx="4" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 97.0 923.0 H 109.0 M 97.0 929.0 H 106.0" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="broker / provisioner" x="136.0" y="921.0" text-anchor="start" class="node-title" font-size="12.35">broker / provisioner</text>
+  <text data-text-role="subtitle" data-full-text="Python Lambda" x="136.0" y="940.0" text-anchor="start" class="node-sub" font-size="11.5">Python Lambda</text>
+  <text x="280.0" y="904.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-kms" data-graph-role="node" data-node-id="kms" data-semantic-role="gateway" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="managed" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="350,890,570,962">
+  <rect x="350.0" y="890.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="362.0" y="905.0" width="42.0" height="42.0" rx="11" fill="#7c3aed" opacity="0.12" stroke="#7c3aed" stroke-width="1.2"/>
+  <path d="M 383.0 914.0 L 395.0 926.0 L 383.0 938.0 L 371.0 926.0 Z" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 377.0 926.0 H 389.0 M 386.0 923.0 L 389.0 926.0 L 386.0 929.0" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="KMS + Secrets Manager" x="416.0" y="921.0" text-anchor="start" class="node-title" font-size="10.95">KMS + Secrets Manager</text>
+  <text data-text-role="subtitle" data-full-text="token 签名 · App 密钥" x="416.0" y="940.0" text-anchor="start" class="node-sub" font-size="11.5">token 签名 · App 密钥</text>
+  <text x="560.0" y="904.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-bedrock" data-graph-role="node" data-node-id="bedrock" data-semantic-role="compute" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="managed" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="630,890,850,962">
+  <rect x="630.0" y="890.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="642.0" y="905.0" width="42.0" height="42.0" rx="11" fill="#059669" opacity="0.12" stroke="#059669" stroke-width="1.2"/>
+  <rect x="652.0" y="917.0" width="22" height="18" rx="4" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 657.0 923.0 H 669.0 M 657.0 929.0 H 666.0" fill="none" stroke="#059669" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="Amazon Bedrock" x="696.0" y="921.0" text-anchor="start" class="node-title" font-size="13.5">Amazon Bedrock</text>
+  <text data-text-role="subtitle" data-full-text="global.* 推理配置文件" x="696.0" y="940.0" text-anchor="start" class="node-sub" font-size="11.5">global.* 推理配置文件</text>
+  <text x="840.0" y="904.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="node-logs" data-graph-role="node" data-node-id="logs" data-semantic-role="observability" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="managed" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="910,890,1130,962">
+  <rect x="910.0" y="890.0" width="220.0" height="72.0" rx="12" fill="#ffffff" stroke="#9bb7cf" stroke-width="1.4" filter="url(#shadowSoft)"/>
+  <rect x="922.0" y="905.0" width="42.0" height="42.0" rx="11" fill="#0891b2" opacity="0.12" stroke="#0891b2" stroke-width="1.2"/>
+  <path d="M 930.0 926.0 Q 943.0 914.0 956.0 926.0 Q 943.0 938.0 930.0 926.0 Z" fill="none" stroke="#0891b2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 937.0 926.0 H 941.0 L 944.0 921.0 L 947.0 931.0 L 950.0 926.0" fill="none" stroke="#0891b2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text data-text-role="title" data-full-text="CloudWatch Logs" x="976.0" y="921.0" text-anchor="start" class="node-title" font-size="13.5">CloudWatch Logs</text>
+  <text data-text-role="subtitle" data-full-text="/dshsa/host 等日志组" x="976.0" y="940.0" text-anchor="start" class="node-sub" font-size="11.5">/dshsa/host 等日志组</text>
+  <text x="1120.0" y="904.0" text-anchor="end" font-size="8.5" font-weight="800" fill="#4b6680">AWS</text>
+  </g>
+  <g id="e-webhook-label" data-graph-role="label" data-owner="e-webhook" data-graph-bounds="75.16,229,177,249">
+  <rect x="75.16" y="229.0" width="101.84" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="126.08" y="243.0" text-anchor="middle" class="arrow-label">HTTPS webhook</text>
+  </g>
+  <g id="e-cdn-label" data-graph-role="label" data-owner="e-cdn" data-graph-bounds="968.2,239,1017,259">
+  <rect x="968.2" y="239.0" width="48.8" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="992.6" y="253.0" text-anchor="middle" class="arrow-label">HTTPS</text>
+  </g>
+  <g id="e-ws-label" data-graph-role="label" data-owner="e-ws" data-graph-bounds="349.16,314,457,334">
+  <rect x="349.16" y="314.0" width="107.84" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="403.08" y="328.0" text-anchor="middle" class="arrow-label">出站 WebSocket</text>
+  </g>
+  <g id="e-ingress-sqs-label" data-graph-role="label" data-owner="e-ingress-sqs" data-graph-bounds="83.56,567,177,587">
+  <rect x="83.56" y="567.0" width="93.44" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="130.28" y="581.0" text-anchor="middle" class="arrow-label">SendMessage</text>
+  </g>
+  <g id="e-panel-label" data-graph-role="label" data-owner="e-panel" data-graph-bounds="932.92,397,1017,417">
+  <rect x="932.92" y="397.0" width="84.08" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="974.96" y="411.0" text-anchor="middle" class="arrow-label">Lambda 集成</text>
+  </g>
+  <g id="e-internal-label" data-graph-role="label" data-owner="e-internal" data-graph-bounds="857.16,455,902.84,475">
+  <rect x="857.16" y="455.0" width="45.68" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="880.0" y="469.0" text-anchor="middle" class="arrow-label">:8080</text>
+  </g>
+  <g id="e-invoke-label" data-graph-role="label" data-owner="e-invoke" data-graph-bounds="684.36,542,737,562">
+  <rect x="684.36" y="542.0" width="52.64" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="710.68" y="556.0" text-anchor="middle" class="arrow-label">Invoke</text>
+  </g>
+  <g id="e-nfs-label" data-graph-role="label" data-owner="e-nfs" data-graph-bounds="862,595,898,615">
+  <rect x="862.0" y="595.0" width="36.0" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="880.0" y="609.0" text-anchor="middle" class="arrow-label">NFS</text>
+  </g>
+  <g id="e-cp-label" data-graph-role="label" data-owner="e-cp" data-graph-bounds="579.08,595,620.92,615">
+  <rect x="579.08" y="595.0" width="41.839999999999996" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="600.0" y="609.0" text-anchor="middle" class="arrow-label">VPCE</text>
+  </g>
+  <g id="e-wapi-sqs-label" data-graph-role="label" data-owner="e-wapi-sqs" data-graph-bounds="343.28,684,436.72,704">
+  <rect x="343.28" y="684.0" width="93.44" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="390.0" y="698.0" text-anchor="middle" class="arrow-label">SendMessage</text>
+  </g>
+  <g id="e-sync-label" data-graph-role="label" data-owner="e-sync" data-graph-bounds="956.2,712,1017,732">
+  <rect x="956.2" y="712.0" width="60.8" height="20" rx="6" fill="#f7fbfe" opacity="0.96"/>
+  <text x="986.6" y="726.0" text-anchor="middle" class="arrow-label">S3 Files</text>
+  </g>
+  <g id="legend" data-graph-role="legend">
+    <rect id="legend-zone" data-graph-role="reserved" data-reserved-kind="legend" x="38" y="1036" width="377.6" height="46" rx="10" fill="none" stroke="none"/>
+    <line data-graph-role="decoration" x1="48.0" y1="1050.0" x2="78.0" y2="1050.0" stroke="#0891b2" stroke-width="2.2" marker-end="url(#arrowC)"/>
+    <text data-graph-role="decoration" x="88.0" y="1054.0" class="legend">入站 / 出站流量</text>
+    <line data-graph-role="decoration" x1="203.6" y1="1050.0" x2="233.6" y2="1050.0" stroke="#ea580c" stroke-width="2.2" marker-end="url(#arrowB)"/>
+    <text data-graph-role="decoration" x="243.6" y="1054.0" class="legend">写入与调用</text>
+    <line data-graph-role="decoration" x1="331.6" y1="1050.0" x2="361.6" y2="1050.0" stroke="#059669" stroke-width="2.2" marker-end="url(#arrowE)"/>
+    <text data-graph-role="decoration" x="371.6" y="1054.0" class="legend">存储</text>
+  </g>
+  <g id="footer" data-graph-role="reserved" data-graph-bounds="48,1093,517,1109">
+  <text x="48.0" y="1105.0" class="footnote">S3、DynamoDB 走网关端点；worker-api 只能经 execute-api 接口端点访问。没有公网监听器，也没有公开桶。</text>
+  </g>
+</svg>

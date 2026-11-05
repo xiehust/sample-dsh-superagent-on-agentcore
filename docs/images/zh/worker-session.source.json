@@ -1,0 +1,277 @@
+{
+ "schema_version": 1,
+ "mode": "flowchart",
+ "style": 1,
+ "quality_profile": "standard",
+ "text_policy": "strict",
+ "width": 1300,
+ "height": 580,
+ "title": "Worker 会话：启动、执行与恢复",
+ "subtitle": "同一 Ticket 始终用同一个 runtimeSessionId；VM 丢失后，新 VM 挂载同一 AP 接着做",
+ "containers": [
+  {
+   "id": "c0",
+   "x": 20,
+   "y": 104,
+   "width": 1260,
+   "height": 130,
+   "label": "启动与挂载（每个 microVM 一次）"
+  },
+  {
+   "id": "c1",
+   "x": 20,
+   "y": 284,
+   "width": 1260,
+   "height": 130,
+   "label": "执行循环（每轮）"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "start",
+   "kind": "rect",
+   "x": 40,
+   "y": 150,
+   "width": 210,
+   "height": 68,
+   "label": "1 start / deliver",
+   "sublabel": "cell 附上新 ticket token",
+   "fill": "#eff6ff",
+   "stroke": "#3b82f6",
+   "flat": true
+  },
+  {
+   "id": "verify",
+   "kind": "rect",
+   "x": 290,
+   "y": 150,
+   "width": 210,
+   "height": 68,
+   "label": "2 gateway 验 token",
+   "sublabel": "VM 绑定首个 ticketKey",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "broker",
+   "kind": "rect",
+   "x": 540,
+   "y": 150,
+   "width": 210,
+   "height": 68,
+   "label": "3 broker 换凭证",
+   "sublabel": "会话策略只放行本 AP",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "mount",
+   "kind": "rect",
+   "x": 790,
+   "y": 150,
+   "width": 210,
+   "height": 68,
+   "label": "4 挂载 /mnt/work",
+   "sublabel": "本 Ticket 的 S3 Files AP",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "prepare",
+   "kind": "rect",
+   "x": 1040,
+   "y": 150,
+   "width": 210,
+   "height": 68,
+   "label": "5 准备仓库",
+   "sublabel": "partial clone + bundle",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "resume",
+   "kind": "rect",
+   "x": 1040,
+   "y": 330,
+   "width": 210,
+   "height": 68,
+   "label": "6 读取输入",
+   "sublabel": "inbox.jsonl · 恢复会话记录",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "turn",
+   "kind": "rect",
+   "x": 790,
+   "y": 330,
+   "width": 210,
+   "height": 68,
+   "label": "7 执行一轮",
+   "sublabel": "Claude Agent SDK / Codex",
+   "fill": "#faf5ff",
+   "stroke": "#9333ea",
+   "flat": true
+  },
+  {
+   "id": "ckpt",
+   "kind": "rect",
+   "x": 540,
+   "y": 330,
+   "width": 210,
+   "height": 68,
+   "label": "8 检查点",
+   "sublabel": "wip ref → repo.bundle",
+   "fill": "#f0fdf4",
+   "stroke": "#16a34a",
+   "flat": true
+  },
+  {
+   "id": "ended",
+   "kind": "rect",
+   "x": 290,
+   "y": 330,
+   "width": 210,
+   "height": 68,
+   "label": "9 turn.ended",
+   "sublabel": "经 worker-api 回到 cell",
+   "fill": "#fff7ed",
+   "stroke": "#f97316",
+   "flat": true
+  },
+  {
+   "id": "wait",
+   "kind": "rect",
+   "x": 40,
+   "y": 330,
+   "width": 210,
+   "height": 68,
+   "label": "10 空闲等待",
+   "sublabel": "下一次 deliver 唤醒",
+   "fill": "#eff6ff",
+   "stroke": "#3b82f6",
+   "flat": true
+  }
+ ],
+ "arrows": [
+  {
+   "id": "e1",
+   "source": "start",
+   "target": "verify",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "control"
+  },
+  {
+   "id": "e2",
+   "source": "verify",
+   "target": "broker",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "control"
+  },
+  {
+   "id": "e3",
+   "source": "broker",
+   "target": "mount",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "write"
+  },
+  {
+   "id": "e4",
+   "source": "mount",
+   "target": "prepare",
+   "source_port": "right",
+   "target_port": "left",
+   "flow": "write"
+  },
+  {
+   "id": "e5",
+   "source": "prepare",
+   "target": "resume",
+   "source_port": "bottom",
+   "target_port": "top",
+   "flow": "control",
+   "label": "首次或新 VM"
+  },
+  {
+   "id": "e6",
+   "source": "resume",
+   "target": "turn",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "control"
+  },
+  {
+   "id": "e7",
+   "source": "turn",
+   "target": "ckpt",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "write"
+  },
+  {
+   "id": "e8",
+   "source": "ckpt",
+   "target": "ended",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "data"
+  },
+  {
+   "id": "e9",
+   "source": "ended",
+   "target": "wait",
+   "source_port": "left",
+   "target_port": "right",
+   "flow": "data"
+  },
+  {
+   "id": "e10",
+   "source": "wait",
+   "target": "resume",
+   "source_port": "bottom",
+   "target_port": "bottom",
+   "flow": "control",
+   "dashed": true,
+   "label": "新输入：同一 VM 直接继续",
+   "route_points": [
+    [
+     145,
+     450
+    ],
+    [
+     1145,
+     450
+    ]
+   ]
+  }
+ ],
+ "legend_orientation": "horizontal",
+ "legend_x": 40,
+ "legend_y": 490,
+ "legend_locked": true,
+ "legend": [
+  {
+   "flow": "control",
+   "label": "控制流"
+  },
+  {
+   "flow": "write",
+   "label": "存储操作"
+  },
+  {
+   "flow": "data",
+   "label": "事件上报"
+  }
+ ],
+ "footer": "丢失窗口：VM 中途消失时，只丢失上次检查点之后尚未提交的工作区改动；会话记录、inbox 与 state 都已落盘。",
+ "footer_x": 40,
+ "footer_y": 550
+}
