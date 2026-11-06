@@ -231,14 +231,102 @@
 <section class="slide">
   <div class="kicker">背景</div>
   <h2>从开源原型到 AWS 实现</h2>
-  <table class="compact" style="margin-top:8px">
-    <thead><tr><th style="width:130px">方面</th><th>开源原型</th><th>AWS on AgentCore</th></tr></thead>
+  <svg viewBox="0 0 1144 244" width="1144" height="244" role="img" aria-label="开源原型与 AWS 实现的架构对比" style="margin-top:6px;flex:0 0 auto">
+    <defs>
+      <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8792a2"/></marker>
+      <marker id="ar4b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2f5bd3"/></marker>
+    </defs>
+    <style>
+      .c4 .bx { fill:#fff; stroke:#cfd7e1; stroke-width:1.2; }
+      .c4 .bx-a { fill:#fdf1e2; stroke:#f0cf9f; stroke-width:1.2; }
+      .c4 .bx-b { fill:#e8eefc; stroke:#c7d4f5; stroke-width:1.2; }
+      .c4 .bx-t { fill:#e3f4f1; stroke:#bfe2dc; stroke-width:1.2; }
+      .c4 .bx-v { fill:#efebfa; stroke:#d8cff1; stroke-width:1.2; }
+      .c4 .bx-r { fill:#fbeceb; stroke:#f0cdca; stroke-width:1.2; }
+      .c4 .grp { fill:#f7f9fc; stroke:#b9c4d2; stroke-width:1.2; stroke-dasharray:5 4; }
+      .c4 .t { font-size:13px; fill:#1b2533; font-weight:600; }
+      .c4 .s { font-size:11.5px; fill:#4a5768; }
+      .c4 .g { font-size:12px; fill:#7b8796; font-weight:600; letter-spacing:.05em; }
+      .c4 .h { font-size:14px; font-weight:700; letter-spacing:.02em; }
+      .c4 .ln { stroke:#8792a2; stroke-width:1.4; fill:none; marker-end:url(#ar4); }
+      .c4 .ln-d { stroke:#8792a2; stroke-width:1.2; fill:none; stroke-dasharray:4 3; marker-end:url(#ar4); }
+      .c4 .lb { font-size:11px; fill:#7b8796; }
+    </style>
+    <g class="c4">
+    <!-- ===== left: prototype ===== -->
+    <text x="0" y="14" class="h" fill="#2f5bd3">开源原型</text>
+    <text x="70" y="14" class="lb">一个进程 · 一台机器 · 一个团队 + 一个仓库</text>
+    <rect x="0" y="48" width="100" height="44" rx="6" class="bx"/><text x="12" y="75" class="t">GitHub</text>
+    <rect x="0" y="152" width="100" height="44" rx="6" class="bx"/><text x="12" y="179" class="t">飞书</text>
+
+    <rect x="128" y="26" width="344" height="214" rx="8" class="grp"/>
+    <text x="142" y="45" class="g">单进程</text>
+    <rect x="142" y="54" width="160" height="52" rx="6" class="bx-b"/>
+    <text x="154" y="76" class="t">Router（常驻会话）</text><text x="154" y="94" class="s">研判 · 订阅 · 回复</text>
+    <rect x="314" y="54" width="144" height="52" rx="6" class="bx"/>
+    <text x="326" y="76" class="t">SQLite</text><text x="326" y="94" class="s">全部状态一个文件</text>
+    <path d="M302,80 L312,80" class="ln"/>
+
+    <rect x="142" y="120" width="316" height="108" rx="6" class="bx-r"/>
+    <text x="154" y="139" class="t">worker × N（同机运行）</text>
+    <rect x="154" y="148" width="92" height="44" rx="5" class="bx"/><text x="164" y="167" class="t">worker</text><text x="164" y="183" class="s">git worktree</text>
+    <rect x="254" y="148" width="92" height="44" rx="5" class="bx"/><text x="264" y="167" class="t">worker</text><text x="264" y="183" class="s">git worktree</text>
+    <rect x="354" y="148" width="92" height="44" rx="5" class="bx"/><text x="364" y="167" class="t">worker</text><text x="364" y="183" class="s">git worktree</text>
+    <text x="154" y="215" class="s" fill="#b8433a" style="fill:#b8433a">danger-full-access · 共享主机，几乎无隔离</text>
+    <path d="M222,106 L222,118" class="ln"/>
+
+    <path d="M140,72 L102,72" class="ln-d"/>
+    <path d="M140,174 L102,174" class="ln-d"/>
+    <text x="106" y="64" class="lb">轮询</text><text x="106" y="166" class="lb">轮询</text>
+
+    <!-- ===== middle ===== -->
+    <path d="M486,134 L548,134" stroke="#2f5bd3" stroke-width="2" fill="none" marker-end="url(#ar4b)"/>
+    <text x="517" y="124" class="lb" text-anchor="middle">core 复用</text>
+    <text x="517" y="152" class="lb" text-anchor="middle">换运行时</text>
+
+    <!-- ===== right: AWS ===== -->
+    <text x="560" y="14" class="h" fill="#c26a00">AWS on AgentCore</text>
+    <text x="710" y="14" class="lb">多租户 · 按 (tenant, repo) 划分 cell</text>
+    <rect x="560" y="48" width="96" height="44" rx="6" class="bx"/><text x="572" y="68" class="t">GitHub</text><text x="572" y="84" class="s">webhook</text>
+    <rect x="560" y="152" width="96" height="44" rx="6" class="bx"/><text x="572" y="172" class="t">飞书</text><text x="572" y="188" class="s">长连接</text>
+
+    <rect x="674" y="40" width="128" height="60" rx="6" class="bx-a"/>
+    <text x="686" y="60" class="t">API Gateway</text><text x="686" y="77" class="s">Lambda → SQS FIFO</text><text x="686" y="92" class="s">每 cell 一个队列</text>
+    <path d="M656,70 L672,70" class="ln"/>
+
+    <rect x="812" y="26" width="172" height="214" rx="8" class="grp"/>
+    <text x="824" y="45" class="g">ECS Fargate host</text>
+    <rect x="830" y="52" width="142" height="64" rx="6" class="bx-b" opacity=".55"/>
+    <rect x="824" y="58" width="142" height="64" rx="6" class="bx-b"/>
+    <text x="836" y="79" class="t">cell × k</text><text x="836" y="96" class="s">原型 core 原样复用</text><text x="836" y="112" class="s">租约保证单写者</text>
+    <rect x="824" y="134" width="148" height="48" rx="6" class="bx"/>
+    <text x="836" y="154" class="t">SQLite / cell</text><text x="836" y="171" class="s">Litestream → S3</text>
+    <path d="M895,122 L895,132" class="ln"/>
+    <path d="M802,80 L822,84" class="ln"/>
+    <path d="M656,174 C736,174 760,100 822,100" class="ln-d"/>
+
+    <rect x="1004" y="26" width="140" height="56" rx="6" class="bx-v"/>
+    <text x="1014" y="49" class="t">Amazon Bedrock</text><text x="1014" y="67" class="s">Assessor / Replier</text>
+    <path d="M966,70 L1002,56" class="ln"/>
+
+    <rect x="1004" y="96" width="140" height="144" rx="8" class="grp"/>
+    <text x="1014" y="114" class="g">AgentCore Runtime</text>
+    <rect x="1020" y="120" width="114" height="48" rx="5" class="bx" opacity=".6"/>
+    <rect x="1014" y="124" width="114" height="48" rx="5" class="bx"/>
+    <text x="1024" y="144" class="t">session × N</text><text x="1024" y="161" class="s">每 Ticket 一个</text>
+    <rect x="1014" y="180" width="120" height="50" rx="5" class="bx-t"/>
+    <text x="1024" y="200" class="t">S3 Files AP</text><text x="1024" y="217" class="s">+ 受限 STS 凭证</text>
+    <path d="M966,108 L1012,142" class="ln"/>
+    </g>
+  </svg>
+  <table class="compact" style="margin-top:10px">
+    <thead><tr><th style="width:110px">方面</th><th style="width:340px">开源原型</th><th>AWS on AgentCore</th></tr></thead>
     <tbody>
       <tr><td>部署单位</td><td>一个进程对应一个团队 + 一个仓库</td><td>多租户；按 (tenant, repo) 划分 cell，复用原型 core</td></tr>
       <tr><td>消息接入</td><td>轮询 GitHub / 飞书产生 Trigger</td><td>GitHub webhook 经 API Gateway、Lambda 进 SQS FIFO；飞书走长连接</td></tr>
       <tr><td>控制面</td><td>单进程，状态在单个 SQLite</td><td>ECS Fargate host 承载 cell；每个 cell 一个 SQLite，Litestream 复制到 S3</td></tr>
       <tr><td>Worker</td><td>每个 Ticket 一个 worker + git worktree，同机运行</td><td>每个 Ticket 一个 AgentCore Runtime session（Claude Agent SDK 或 Codex），持久状态在 S3 Files，microVM 回收后可恢复</td></tr>
-      <tr><td>隔离</td><td>worker 以 <code>danger-full-access</code> 运行，几乎没有隔离</td><td>每个 Ticket 一个 S3 Files access point + 受限 STS 凭证；Runtime 只接受控制面的 IAM 调用</td></tr>
+      <tr><td>隔离</td><td>worker 以 <code>danger-full-access</code> 运行，几乎无隔离</td><td>每个 Ticket 一个 S3 Files access point + 受限 STS 凭证；Runtime 只接受控制面的 IAM 调用</td></tr>
     </tbody>
   </table>
   <p class="small muted" style="margin-top:12px">研判、订阅、Ticket 生命周期的规则与提示词原样复用；变化集中在运行时、存储与隔离。</p>
@@ -254,7 +342,7 @@
       <div class="row" style="gap:16px"><div class="big-num">01</div><div><h3 style="font-size:20px">被动与主动</h3><p class="muted small">主动 agent 需要额外解决的问题</p></div></div>
       <div class="row" style="gap:16px"><div class="big-num">02</div><div><h3 style="font-size:20px">dsh-superagent 工作机制</h3><p class="muted small">领域模型、感知、授权、Eval、订阅、执行与回报</p></div></div>
       <div class="row" style="gap:16px"><div class="big-num">03</div><div><h3 style="font-size:20px">原型的 router 与上下文管理</h3><p class="muted small">一个长期会话如何保持轻量</p></div></div>
-      <div class="row" style="gap:16px"><div class="big-num aws">04</div><div><h3 style="font-size:20px">AWS on AgentCore 方案</h3><p class="muted small">架构、cell、无状态判断、worker、安全与可靠性</p></div></div>
+      <div class="row" style="gap:16px"><div class="big-num aws">04</div><div><h3 style="font-size:20px">AWS on AgentCore 方案</h3><p class="muted small">架构、cell、无状态判断、worker、部署、安全与可靠性</p></div></div>
       <div class="row" style="gap:16px"><div class="big-num aws">05</div><div><h3 style="font-size:20px">对比与取舍</h3><p class="muted small">原型与 AWS 实现的差异、已知限制</p></div></div>
       <div class="row" style="gap:16px"><div class="big-num">06</div><div><h3 style="font-size:20px">模式抽象</h3><p class="muted small">可复用到其他领域的组成部分</p></div></div>
     </div>
@@ -446,22 +534,23 @@
 <!-- 11 Strength & mode -->
 <section class="slide">
   <div class="kicker">判断 · 闸门</div>
-  <h2>强度与接受模式：主动能力如何受控放开</h2>
-  <p class="lede">闸门是确定性代码，先给每条消息定强度；主动（inferred）路径另受接受模式约束，默认只记录不执行。</p>
-  <div class="grid3" style="margin-bottom:18px">
-    <div class="card tint-blue"><span class="tag blue">explicit</span><h3 style="margin-top:8px">明确请求</h3><p>名单内的人 @ 或私聊机器人；名单内的人在已有 Ticket 的 Thread 上追问；准入表设为 explicit 的单元格。<br><b>任何模式下都生效。</b></p></div>
-    <div class="card tint-violet"><span class="tag violet">inferred</span><h3 style="margin-top:8px">推断候选</h3><p>没人点名，但可能符合团队写下的规则：名单内的人未 @ 的讨论、名单上机器人的消息、名单外的人在已有 Ticket 上的追问。</p></div>
-    <div class="card tint-soft"><span class="tag">不准入</span><h3 style="margin-top:8px">直接记录</h3><p>其他机器人、准入表 ignore 的消息、<code>off</code> 模式下的所有 inferred 情形。不调用模型。</p></div>
+  <h2>主动能力如何一步步放开</h2>
+  <p class="lede">每条消息进来，先由一段固定规则（不调模型）分类：是有人<b>点名</b>找机器人，还是机器人<b>可能该主动帮忙</b>？后者默认只记下"本来会做什么"，团队看过、放心了再让它真的动手。</p>
+  <div class="kicker" style="margin-bottom:8px">第一步 · 这条消息属于哪一类</div>
+  <div class="grid3" style="margin-bottom:22px">
+    <div class="card tint-blue"><span class="tag blue">explicit</span><h3 style="margin-top:8px">有人点名</h3><p>团队成员 @ 或私聊机器人，或在它正在做的事上追问。<br><b>总会认真处理。</b></p></div>
+    <div class="card tint-violet"><span class="tag violet">inferred</span><h3 style="margin-top:8px">可能值得主动帮忙</h3><p>没人 @，但讨论里也许有活，例如"这个测试又挂了"。<br><b>做不做，看下面的开关。</b></p></div>
+    <div class="card tint-soft"><span class="tag">ignore</span><h3 style="margin-top:8px">与它无关</h3><p>其他机器人的消息、团队设为忽略的来源。<br><b>只留记录，不调模型。</b></p></div>
   </div>
-  <table>
-    <thead><tr><th style="width:140px">接受模式</th><th>inferred 候选的处理</th><th style="width:300px">用途</th></tr></thead>
-    <tbody>
-      <tr><td><code>off</code></td><td>不产生候选</td><td>只接明确请求</td></tr>
-      <tr><td><code>observe</code>（默认）</td><td>照常评估；评估为可接受时记为 ignore 并标注 <code>would_accept</code>，不开 Ticket</td><td>上线初期审阅"本来会做什么"</td></tr>
-      <tr><td><code>auto</code></td><td>评估为可接受且命中至少一条启用规则时，开 Ticket</td><td>审阅满意后放开</td></tr>
-    </tbody>
-  </table>
-  <p class="small muted" style="margin-top:12px">规则、模式和各 Source 的 Policy 合成 Policy 版本。版本变化会作废进行中的 Eval 并重新排队，并通知受影响的在途 Ticket。</p>
+  <div class="kicker" style="margin-bottom:8px">第二步 · 主动开关（只管"可能值得帮忙"这一类）</div>
+  <div class="flow">
+    <div class="step"><div class="who">OFF</div><h4>关闭</h4><p>只响应点名，从不主动。</p></div>
+    <div class="arrow">→</div>
+    <div class="step" style="border-top:3px solid var(--blue)"><div class="who">OBSERVE · 默认</div><h4>观察</h4><p>照常判断，但只写下"这件我本来会接"，不真的开工，供团队复盘。</p></div>
+    <div class="arrow">→</div>
+    <div class="step" style="border-top:3px solid var(--teal)"><div class="who">AUTO</div><h4>自动</h4><p>判断值得做，且符合团队事先写好的规则，才真正开工。</p></div>
+  </div>
+  <p class="small muted" style="margin-top:16px">"谁算团队成员""哪些消息要看"按每个接收范围（某个飞书群、私聊、GitHub 的 Issue / PR / 评论 / CI）分别配置。改了设置，正在进行的判断会按新规则重来。</p>
 </section>
 
 <!-- 12 Eval explicit -->
@@ -634,33 +723,84 @@
 <section class="slide">
   <div class="kicker">原型 · router</div>
   <h2>只放路由需要的信息，状态在数据库，细节用指针</h2>
-  <div class="grid3 fill" style="align-content:start;margin-top:10px">
-    <div class="card">
-      <h3>卡片而非原文</h3>
-      <p>推给 router 的是截断的候选卡片：消息、Thread 上的 Ticket（最多 8 个）、已送达、被引用的 Ticket、退回理由。细节用 <code>orchestrator_read</code> 按资源名读：<code>ticket/&lt;id&gt;</code>、<code>thread/&lt;key&gt;</code>……文本页 4–8k 字符，列表分页。</p>
-    </div>
-    <div class="card">
-      <h3>两种推送</h3>
-      <p><b>relay</b>（唤醒）：候选卡片、follow_up、worker 报告（摘要 ≤600 字符）。<br><b>notice</b>（只追加）：Ticket 结束、设置变更等。同名 notice 未送达时被替换；router 自己做的操作不回送 notice。</p>
-    </div>
-    <div class="card">
-      <h3>提示词每次重拼</h3>
-      <p>规则与 Policy 不依赖对话历史，每次调用前从当前设置生成；Policy 段放最后，修改立即生效且不打乱前缀。router 不读仓库的 <code>AGENTS.md</code>。</p>
-    </div>
-    <div class="card">
-      <h3>主动评估的有界窗口</h3>
-      <p><code>orchestrator_eval</code> 给出：Trigger ≤4,000 字符、相关 Ticket ≤8、Thread 前 5 条 + Trigger 前后各 5 条，其余为 50 字符 stub，可按 id 展开或读图。</p>
-    </div>
-    <div class="card">
-      <h3>压缩交给 Harness</h3>
-      <p>应用层不做压缩；提示词要求压缩后重新查看 Ticket 摘要。程序兜底：accept 按 Eval 幂等、relay/notice 按 request id 去重。</p>
-    </div>
-    <div class="card">
-      <h3>不让它等待</h3>
-      <p><code>noWait</code> 守卫拒绝 sleep、&gt;30 秒的 shell timeout、&gt;5 秒的 job wait。新候选和报告会自动推送，停下来等只会积压。</p>
-    </div>
-  </div>
-  <div class="quote" style="margin-top:14px">结果：router 的上下文里基本只有"谁、什么事、交给了谁、结果如何"。</div>
+  <p class="lede" style="margin-bottom:10px">原型的 router 是一个长期存在的 DeepSeek Harness 会话（main Session），关键是控制这条对话变长的速度。</p>
+  <svg viewBox="0 0 1144 428" width="1144" height="428" role="img" aria-label="router 上下文管理示意图" style="flex:0 0 auto">
+    <defs>
+      <marker id="ar21" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8792a2"/></marker>
+    </defs>
+    <style>
+      .c15 .bx { fill:#fff; stroke:#cfd7e1; stroke-width:1.2; }
+      .c15 .bx-a { fill:#fdf1e2; stroke:#f0cf9f; stroke-width:1.2; }
+      .c15 .bx-b { fill:#e8eefc; stroke:#c7d4f5; stroke-width:1.2; }
+      .c15 .bx-t { fill:#e3f4f1; stroke:#bfe2dc; stroke-width:1.2; }
+      .c15 .bx-r { fill:#fbeceb; stroke:#f0cdca; stroke-width:1.2; }
+      .c15 .bx-s { fill:#f1f4f8; stroke:#dde3ea; stroke-width:1.2; }
+      .c15 .grp { fill:#f7f9fc; stroke:#b9c4d2; stroke-width:1.2; stroke-dasharray:5 4; }
+      .c15 .t { font-size:13px; fill:#1b2533; font-weight:600; }
+      .c15 .s { font-size:11.5px; fill:#4a5768; }
+      .c15 .m { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:11.5px; fill:#263447; }
+      .c15 .g { font-size:12px; fill:#7b8796; font-weight:600; letter-spacing:.05em; }
+      .c15 .ln { stroke:#8792a2; stroke-width:1.4; fill:none; marker-end:url(#ar21); }
+      .c15 .lb { font-size:11px; fill:#7b8796; }
+    </style>
+    <g class="c15">
+    <!-- left: pushes -->
+    <text x="0" y="14" class="g">推给 router</text>
+    <rect x="0" y="26" width="300" height="140" rx="6" class="bx-b"/>
+    <text x="14" y="49" class="t">relay · 唤醒 router</text>
+    <rect x="14" y="60" width="272" height="28" rx="4" class="bx"/><text x="24" y="79" class="s">候选卡片（截断，不是原文）</text>
+    <rect x="14" y="94" width="272" height="28" rx="4" class="bx"/><text x="24" y="113" class="s">follow_up（Thread 上的追问）</text>
+    <rect x="14" y="128" width="272" height="28" rx="4" class="bx"/><text x="24" y="147" class="s">worker 报告（摘要 ≤600 字符）</text>
+    <rect x="0" y="182" width="300" height="102" rx="6" class="bx-s"/>
+    <text x="14" y="205" class="t">notice · 只追加，不唤醒</text>
+    <text x="14" y="228" class="s">Ticket 结束、设置变更等</text>
+    <text x="14" y="248" class="s">同名 notice 未送达时被替换</text>
+    <text x="14" y="268" class="s">router 自己的操作不回送 notice</text>
+    <path d="M300,110 L338,176" class="ln"/>
+    <path d="M300,234 L338,250" class="ln"/>
+
+    <!-- centre: prompt + context -->
+    <text x="340" y="14" class="g">ROUTER（MAIN SESSION）</text>
+    <rect x="340" y="26" width="440" height="80" rx="6" class="bx-t"/>
+    <text x="354" y="49" class="t">系统提示词：每次调用前从当前设置重拼</text>
+    <text x="354" y="70" class="s">规则与 Policy 不依赖对话历史；Policy 段放最后</text>
+    <text x="354" y="90" class="s">改设置立即生效、前缀不被打乱；不读仓库 AGENTS.md</text>
+    <rect x="340" y="120" width="440" height="236" rx="8" class="grp"/>
+    <text x="354" y="140" class="g">对话上下文：只有"谁、什么事、交给了谁、结果如何"</text>
+    <rect x="354" y="150" width="412" height="46" rx="5" class="bx"/>
+    <text x="366" y="168" class="t">候选卡片</text><text x="366" y="186" class="s">消息 · Thread 上的 Ticket（≤8）· 已送达 · 被引用的 Ticket · 退回理由</text>
+    <rect x="354" y="202" width="412" height="46" rx="5" class="bx"/>
+    <text x="366" y="220" class="t">主动评估窗口 <tspan class="m">orchestrator_eval</tspan></text><text x="366" y="238" class="s">Trigger ≤4,000 字符 · Thread 前 5 条 + 前后各 5 条，其余 50 字符 stub</text>
+    <rect x="354" y="254" width="412" height="46" rx="5" class="bx"/>
+    <text x="366" y="272" class="t">worker 报告摘要</text><text x="366" y="290" class="s">全文留在库里，需要时再读</text>
+    <rect x="354" y="306" width="412" height="40" rx="5" class="bx-s"/>
+    <text x="366" y="331" class="s"><tspan class="t">notice</tspan>　Ticket 已结束 / 设置已变更</text>
+
+    <!-- right: state + pointers -->
+    <text x="820" y="14" class="g">状态在数据库</text>
+    <rect x="820" y="26" width="324" height="80" rx="6" class="bx-a"/>
+    <text x="834" y="49" class="t">卡片里只放指针</text>
+    <text x="834" y="70" class="s">Ticket、Thread 用 id 表示，</text>
+    <text x="834" y="90" class="s">细节按资源名读取，不整段塞进上下文</text>
+    <rect x="820" y="120" width="324" height="236" rx="8" class="grp"/>
+    <text x="834" y="140" class="g">SQLITE</text>
+    <rect x="834" y="150" width="296" height="30" rx="4" class="bx"/><text x="846" y="170" class="m">ticket/&lt;id&gt;</text>
+    <rect x="834" y="188" width="296" height="30" rx="4" class="bx"/><text x="846" y="208" class="m">thread/&lt;key&gt;</text>
+    <rect x="834" y="226" width="296" height="30" rx="4" class="bx"/><text x="846" y="246" class="s">消息全文、图片、报告原文……</text>
+    <text x="834" y="290" class="s">文本页 4–8k 字符，列表分页</text>
+    <text x="834" y="312" class="lb">router 调用</text><text x="900" y="312" class="m">orchestrator_read</text><text x="1026" y="312" class="lb">按名读取</text>
+    <path d="M818,238 L782,238" class="ln"/>
+    <text x="785" y="230" class="lb">read</text>
+
+    <!-- bottom guards -->
+    <rect x="0" y="372" width="560" height="54" rx="6" class="bx-r"/>
+    <text x="14" y="394" class="t">不让它等待：<tspan class="m">noWait</tspan> 守卫</text>
+    <text x="14" y="414" class="s">拒绝 sleep、&gt;30 秒的 shell timeout、&gt;5 秒的 job wait；新候选和报告会自动推来</text>
+    <rect x="584" y="372" width="560" height="54" rx="6" class="bx"/>
+    <text x="598" y="394" class="t">压缩交给 Harness，程序兜底</text>
+    <text x="598" y="414" class="s">压缩后重读 Ticket 摘要；accept 按 Eval 幂等，relay / notice 按 request id 去重</text>
+    </g>
+  </svg>
 </section>
 
 <!-- 19 Divider AWS -->
@@ -757,7 +897,7 @@
 
     <!-- bottom data -->
     <rect x="0" y="440" width="270" height="62" rx="6" class="bx-a"/>
-    <text x="12" y="463" class="t">DynamoDB</text><text x="12" y="482" class="s">tenants · cells · routes · leases · ticket-storage</text>
+    <text x="12" y="461" class="t">DynamoDB（6 张表，PITR）</text><text x="12" y="479" class="s">tenants · cells · routes · leases</text><text x="12" y="494" class="s">ticket-storage · onboarding</text>
     <rect x="290" y="440" width="250" height="62" rx="6" class="bx-a"/>
     <text x="302" y="463" class="t">Amazon S3</text><text x="302" y="482" class="s">state（Litestream 副本）· data（S3 Files）</text>
     <rect x="560" y="440" width="270" height="62" rx="6" class="bx-a"/>
@@ -773,12 +913,12 @@
   <div class="kicker aws">架构原则</div>
   <h2>四条架构原则</h2>
   <div class="grid2 fill" style="align-content:start;margin-top:12px">
+    <div class="card tint-blue"><h3>领域核心原样复用</h3><p><code>packages/core</code> 是原型 Engine、领域模型与 Policy 的拷贝，决策工具 schema 同名同结构；只允许改适配层。判断规则、授权、订阅逻辑与原型一致。</p></div>
     <div class="card tint-blue"><h3>每个 cell 单写者</h3><p>一个 Engine 同一时刻独占一个 SQLite 文件，由带 fence 的 DynamoDB 租约保证。对 cell 的所有写入（消息、worker 事件、管理命令）只经两个入口：该 cell 的 FIFO 队列，或租约持有者的内部 HTTP。</p></div>
-    <div class="card tint-blue"><h3>DSH core 原样复用</h3><p><code>packages/core</code> 是原型 <code>src/core</code> 与 <code>policy.ts</code> 的拷贝，决策工具 schema 同名同结构；只允许改适配层。判断规则、授权、订阅逻辑与原型一致。</p></div>
     <div class="card tint-amber"><h3>worker 不可信</h3><p>worker 唯一的权限是 ticket token；它能触达的一切都按 (tenant, cell, ticket) 限定：只读本仓库、只读已绑定的飞书群、只挂载自己的存储。</p></div>
-    <div class="card tint-violet"><h3>没有长期 router 会话</h3><p>判断和回复写作拆成两个无状态 Bedrock 调用（Assessor、Replier）。每次调用的输入是一张现拼的、有上限的卡片，用完即弃；权威状态始终在 SQLite。</p></div>
+    <div class="card tint-red"><h3>默认拒绝（fail closed）</h3><p>先鉴权再产生副作用：webhook 先验 HMAC，gateway 先验 token。校验失败一律拒绝；bundle 前置提交丢失时上报 <code>failed</code> 而不是猜；密钥只写不读、不进日志。</p></div>
   </div>
-  <p class="small muted" style="margin-top:12px">隔离单元：cell = 一个 (tenant, GitHub 仓库)，<code>cellId = &lt;tenantId&gt;--gh&lt;repoId&gt;</code>。飞书群通过路由表绑定到 cell。</p>
+  <p class="small muted" style="margin-top:12px">隔离单元：cell = 一个 (tenant, GitHub 仓库)，<code>cellId = &lt;tenantId&gt;--gh&lt;repoId&gt;</code>，飞书群通过路由表绑定到 cell。判断与回复是两个无状态 Bedrock 调用，没有长期 router 会话（见后页）。</p>
 </section>
 
 <!-- 22 Cell -->
@@ -840,7 +980,7 @@
           <li>截止时间 = Eval 超时（默认 120 秒）；并发上限 4</li>
           <li>失败记为 <code>unavailable</code>，由 Engine 按原型规则重排重试</li>
           <li>Replier：仅 ready / blocked / failed / dropped 或带问题的报告触发，调用 <code>orchestrator_reply</code>，可选择不发</li>
-          <li>模型按 cell 在面板配置</li>
+          <li>模型只来自目录 <code>models.ts</code>；默认 GPT-6 Luna（effort low），按 cell 在面板改</li>
         </ul>
       </div>
       <div class="card tint-soft"><h3>上下文管理的变化</h3>
@@ -866,7 +1006,8 @@
       <ul class="dots small aws">
         <li><code>runtimeSessionId</code> 由 cellId + ticketId 派生，同一 Ticket 始终落在同一会话</li>
         <li>gateway 以 root 运行，持有 token；agent 以 uid 1000 运行，经本地代理访问控制面</li>
-        <li>两种 worker：Claude Agent SDK、Codex（Bedrock），按 cell 选择</li>
+        <li>两种 worker：Claude Agent SDK、Codex app-server，按 cell 选择；首次启动后按 Ticket 固定</li>
+        <li><code>start</code> 按 assignmentId 幂等，每次调用都带最新 config，设置从下一轮生效</li>
       </ul>
     </div>
     <div class="card">
@@ -884,6 +1025,7 @@
         <li>从 GitHub 部分克隆，再从 bundle 恢复分支和未提交改动</li>
         <li>Agent SDK 用同一份对话记录 resume</li>
         <li>最多丢失上次 checkpoint 之后的未提交编辑</li>
+        <li>冷启动：pinner 把首轮所需文件（含约 313 MB 的 Claude CLI）钉进 AgentCore 快照</li>
       </ul>
     </div>
   </div>
@@ -892,20 +1034,59 @@
   </div>
 </section>
 
+<!-- 25a Infra -->
+<section class="slide">
+  <div class="kicker aws">部署</div>
+  <h2>基础设施：一个账号、一个区域、五个 CDK 栈</h2>
+  <div class="row fill" style="align-items:flex-start;gap:18px;margin-top:6px">
+    <div class="card" style="flex:1.35">
+      <table class="compact">
+        <thead><tr><th style="width:118px">栈</th><th>主要资源</th></tr></thead>
+        <tr><td><code>dshsa-shared</code></td><td>VPC、端点与安全组；6 张 DynamoDB 表；KMS 密钥 <code>alias/dshsa-ticket-token</code>；data / state / 日志桶；Secrets Manager；Cognito 用户池</td></tr>
+        <tr><td><code>dshsa-worker</code></td><td>S3 Files 文件系统与挂载目标；broker / provisioner / worker-api Lambda；私有 REST API；AgentCore Runtime（Claude，可选 Codex）；SSM <code>/dshsa-worker/version</code></td></tr>
+        <tr><td><code>dshsa-host</code></td><td>ECS Fargate 服务（arm64，1 vCPU / 2 GB，默认 1 个任务）、日志组 <code>/dshsa/host</code></td></tr>
+        <tr><td><code>dshsa-ingress</code></td><td>HTTP API <code>POST /github/webhook</code> + webhook Lambda、访问日志</td></tr>
+        <tr><td><code>dshsa-panel</code></td><td>SPA 桶 + CloudFront（OAC）；panel-api / tenant / platform Lambda；Cognito 托管 UI；JWT HTTP API；审计日志</td></tr>
+      </table>
+      <p class="small muted" style="margin-top:8px">每个 cell 的 SQS FIFO 队列（及死信队列）不在 CDK 中，接入仓库时由 <code>dshsa-admin</code> / 面板创建。部署：<code>scripts/deploy.sh [stack ...]</code>。</p>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="card"><h3>区域与网络</h3>
+        <ul class="dots small aws">
+          <li>账号由 <code>DSHSA_ACCOUNT</code> 锁定；区域固定 <code>ap-northeast-1</code>（离 open.feishu.cn 近）</li>
+          <li><code>dshsa-vpc</code>：公有子网只放 1 个 NAT，计算全在私有子网</li>
+          <li>S3 / DynamoDB 网关端点；<code>execute-api</code> 接口端点（worker-api 只能经它访问）</li>
+          <li>资源一律 <code>dshsa-</code> 前缀，代码拒绝动其他名称的资源</li>
+        </ul>
+      </div>
+      <div class="card"><h3>谁能到达谁</h3>
+        <ul class="dots small aws">
+          <li>GitHub → ingress：公网 HTTPS + HMAC</li>
+          <li>host → 飞书 / GitHub：经 NAT 出站；host → AgentCore：SigV4</li>
+          <li>panel-api / worker-api → host :8080：VPC 内，预签名 STS + 安全组</li>
+          <li>microVM → S3 Files：NFS，仅 runtime 安全组可达</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- 25 Security -->
 <section class="slide">
   <div class="kicker aws">安全</div>
   <h2>安全模型：worker 按不可信处理</h2>
-  <table style="margin-top:10px">
-    <thead><tr><th style="width:150px">层</th><th>机制</th></tr></thead>
+  <table class="compact" style="margin-top:6px">
+    <thead><tr><th style="width:140px">层</th><th>机制</th></tr></thead>
     <tbody>
+      <tr><td>入口</td><td>GitHub webhook 在解析任何内容前先校验 HMAC（密钥在 Secrets Manager）+ API GW 限流；飞书走长连接，不需要公网入口</td></tr>
+      <tr><td>面板</td><td>Cognito JWT，按 <code>cognito:groups</code> 校验 tenant 归属后转发；只有团队管理员和平台管理员能改设置；部署脚本确认匿名请求得到 401</td></tr>
+      <tr><td>内部调用</td><td>panel-api / worker-api 调 host :8080 时附预签名 <code>sts:GetCallerIdentity</code> URL（签名覆盖目标 cellId），host 核对角色 ARN；安全组白名单是第二道防线</td></tr>
       <tr><td>Runtime 入口</td><td>AgentCore 入站认证为 IAM；只有 host task 角色有 <code>InvokeAgentRuntime</code>；无人拥有 <code>InvokeAgentRuntimeCommand</code></td></tr>
-      <tr><td>Ticket 身份</td><td>KMS 非对称密钥签发的 ES256 ticket token，含 tenant / cell / ticket / assignment / session，有效期 ≤2 小时；只有 cell 签发</td></tr>
-      <tr><td>存储</td><td>每 Ticket 一个 S3 Files access point；挂载凭证的 session policy 限定该 AP；执行角色本身没有 S3 / S3 Files 权限</td></tr>
+      <tr><td>Ticket 身份</td><td>KMS 非对称密钥签发的 ES256 ticket token，绑定 tenant / cell / ticket / assignment，≤2 小时；只有 cell 签发，只存在于 gateway 进程</td></tr>
+      <tr><td>存储隔离</td><td>每 Ticket 一个 S3 Files AP；挂载凭证的 session policy 限定该 AP，文件系统策略拒绝不经 AP 的访问；执行角色本身没有 S3 / S3 Files 权限</td></tr>
       <tr><td>VM 内</td><td>gateway root、agent uid 1000 + NoNewPrivs；一个 VM 绑定第一个 token 的 ticketKey</td></tr>
-      <tr><td>worker 出口</td><td>worker-api 为私有 AWS_IAM API（runtime 角色 + VPC endpoint 条件）且要求 ticket token；访问范围取自 token，不取自请求</td></tr>
-      <tr><td>面板</td><td>Cognito JWT，按 <code>cognito:groups</code> 校验 tenant 归属后转发到内部 HTTP</td></tr>
-      <tr><td>入口</td><td>GitHub webhook HMAC 校验（密钥在 Secrets Manager）+ API GW 限流；飞书走长连接，不需要公网入口</td></tr>
+      <tr><td>worker 出口</td><td>私有 AWS_IAM API（runtime 角色 + VPC endpoint 条件）且要求 ticket token；范围取自 token 而非请求体；GitHub 凭证限本仓库、≤1 小时</td></tr>
+      <tr><td>GitHub 安装归属</td><td>不信任重定向里的 <code>installation_id</code>，用用户令牌调 <code>GET /user/installations</code> 核实；组织安装需组织管理员或平台管理员批准</td></tr>
     </tbody>
   </table>
   <p class="small muted" style="margin-top:12px">提示词层：所有消息、引用和仓库文件都按不可信数据处理；转发的指令不构成授权；Thread 上下文不能覆盖名单、规则和明确的 stop。</p>
@@ -953,7 +1134,7 @@
   <div class="kicker aws">运营</div>
   <h2>运营与可观测</h2>
   <p class="lede">原型可以在对话里让 router 改设置、查状态；AWS 实现把这些操作统一放到面板，按 tenant 鉴权。</p>
-  <div class="grid3 fill" style="align-content:start">
+  <div class="grid3" style="align-content:start">
     <div class="card">
       <h3>面板操作</h3>
       <ul class="dots small aws">
@@ -981,6 +1162,9 @@
         <li>切到 <code>auto</code>；噪音大时缩短规则或暂停</li>
       </ul>
     </div>
+  </div>
+  <div class="card tint-soft" style="margin-top:14px">
+    <p class="small"><b>发布与排障</b>：AgentCore 部署不会更新正在运行的会话，cell 会停掉 <code>workerVersion</code> 与 SSM <code>/dshsa-worker/version</code> 不一致的空闲会话。"发了消息没反应"时，先查 <code>/dshsa/host</code> 日志里的 <code>trigger not admitted</code>（闸门拒绝）和 <code>decision ignored</code>（评估忽略）。</p>
   </div>
 </section>
 
@@ -1015,6 +1199,23 @@
 </section>
 
 <!-- 31 Tradeoffs -->
+<!-- 30a Trade-offs -->
+<section class="slide">
+  <div class="kicker">取舍</div>
+  <h2>关键设计取舍</h2>
+  <table style="margin-top:10px">
+    <thead><tr><th style="width:150px">问题</th><th style="width:330px">选择</th><th>原因</th></tr></thead>
+    <tbody>
+      <tr><td>工作副本放哪</td><td>本地盘 + 每轮 <code>repo.bundle</code> 检查点</td><td>S3 Files 上 git 慢 17–384 倍（spike S1）；会话记录等小文件仍在 S3 Files，逐行持久</td></tr>
+      <tr><td>存储隔离</td><td>每 Ticket 一个 S3 Files AP + broker</td><td>AgentCore 会话上下文键无法约束 S3 Files；普通 S3 前缀不支持追加和 rename，持久粒度会从"每行"降到"每次上传"</td></tr>
+      <tr><td>飞书接入</td><td>长连接，不开公网入口</td><td>减少攻击面；用租约保证每租户只有一个连接</td></tr>
+      <tr><td>内部调用鉴权</td><td>预签名 STS + 安全组</td><td>请求必须到达特定的租约持有者任务，因此第一阶段未采用 VPC Lattice</td></tr>
+      <tr><td>cell 存储</td><td>SQLite + Litestream</td><td>与原型的 Store 一致，单写者模型下简单可靠</td></tr>
+      <tr><td>区域</td><td>固定 <code>ap-northeast-1</code></td><td>离飞书开放平台近；换区域需改常量并指定 AgentCore 支持的可用区</td></tr>
+    </tbody>
+  </table>
+</section>
+
 <section class="slide">
   <div class="kicker">取舍</div>
   <h2>得到的与失去的</h2>
