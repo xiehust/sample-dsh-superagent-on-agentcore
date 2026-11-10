@@ -169,13 +169,24 @@ S1 (Django, 7k files, real microVM, ap-northeast-1) measured git on the S3 Files
 /home/agent/work/repo/            LOCAL (microVM disk): the git working copy the agent edits; lost with the VM
 /mnt/work/.claude/                S3 Files: Claude Agent SDK config + session transcripts (append-only JSONL), for resume
 /mnt/work/.dshsa/                 S3 Files: inbox.jsonl, state.json, config.json (fsync'd)
-/mnt/work/repo.bundle             S3 Files: `git bundle create --all` of the local repo, plus refs/dshsa/wip
+/mnt/work/repo.bundle             S3 Files: incremental git bundle of what GitHub lacks (local commits/branches, refs/dshsa/wip, refs/dshsa/wip-index)
 /mnt/work/out/                    S3 Files: artifacts the worker wants to keep
 ```
 - **Codex tickets (v7)** keep only their rollouts on the AP: `/mnt/work/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`, linked as `$CODEX_HOME/sessions`. CODEX_HOME itself (`/home/agent/.codex`: config, skills, writer locks, helper links) and Codex's SQLite are on the VM's local disk, because codex's per-thread file lock would outlive a stopped VM on S3 Files (NFS lease; found live 2026-11-03). `state.json` stores `codexThreadId/Path/At`, `codexTurnAt` and `codexPromptHash`, and a fresh VM resumes with `thread/resume`; a changed cell prompt reaches a resumed thread once as an `application` `additionalContext` note (codex sends `developerInstructions` only at thread start). Only the cell's skills (given YAML frontmatter when they lack it) plus the repo's `.agents/skills` are visible; bundled, user and admin skills are removed, and codex's guardian reviewer is off. The app-server inherits the agent environment minus `AWS_BEARER_TOKEN_BEDROCK`, `AWS_PROFILE`, `AWS_CONFIG_FILE`, `AWS_SHARED_CREDENTIALS_FILE`, `OPENAI_*` and `CODEX_*`, and starts on the first turn (after the V2 restore, so with session credentials).
-- **Checkpoint** (agent, at the end of every turn and on gateway SIGTERM, before `turn.ended`): commit uncommitted changes to `refs/dshsa/wip` without touching the branch (`git stash create` → `update-ref`); then `git bundle create /mnt/work/repo.bundle.tmp --all` → fsync → atomic rename to `repo.bundle`; then `sync()`.
-- **Bundle is incremental** (v5.1): `git bundle create --all --not --remotes=origin` holds only what GitHub doesn't have (local commits, local branches, `refs/dshsa/wip` = work tree incl. untracked, `refs/dshsa/wip-index` = index). A full bundle would force a blob:none partial clone to lazily fetch every historical blob.
-- **Prepare/resume** (agent, on start in a fresh VM): `--filter=blob:none` partial clone from GitHub, then (if `repo.bundle` exists) fetch the bundle's refs, check out the recorded branch, `read-tree -m -u HEAD wip`, then `read-tree wip-index`, then `fetch origin`. If a force-push on origin dropped the bundle's prerequisite commits, the restore fails closed (report `failed`).
+- **Checkpoint** (`Repo.checkpoint` in `worker/container/repo.py`). The agent runs it at the end of every turn, after the turn's report and before `os.sync()` and `turn.ended`. The gateway also runs it on SIGTERM through the agent's `/checkpoint` (25 s budget, then `os.sync()` with a 10 s budget). It never touches the checked-out branch, the index or the work tree:
+  1. *Snapshot.* `refs/dshsa/wip-index` is a `commit-tree` of the current index (`write-tree`), with HEAD as parent. `refs/dshsa/wip` is a `commit-tree` of the whole work tree, including untracked files that are not ignored. It is built with `git add -A` into a temporary index, a copy of the real one, so the stat cache rehashes only changed files (7k-file repo: 0.4 s → ~0.1 s). Its parent is HEAD, and its message records `branch=`, `head=` and `index=`. A directory without `.git` or without commits is skipped.
+  2. *Skip when unchanged.* `.git/dshsa-checkpoint.json` keeps a sha256 fingerprint of HEAD, the branch, both trees and all `refs/heads`. If the fingerprint is equal and `repo.bundle` exists, nothing is written.
+  3. *Write.* The bundle is built on local disk (`.git/dshsa.bundle`), because git's own write pattern is far slower on S3 Files. It is copied in one sequential write to `repo.bundle.tmp` → `fsync` → `os.replace` → directory `fsync` → `sync()`. The AP therefore always holds a whole bundle, old or new.
+  4. A failed checkpoint is logged (`repo_checkpoint` with `error`) and does not fail the turn.
+- **Bundle is incremental** (v5.1): `git bundle create --branches --glob=refs/dshsa/* --not --remotes=origin --tags`. It holds only what GitHub doesn't have: local commits, local branches, `wip` and `wip-index`. Never `--all`: that also bundles tags whose history no origin branch reaches (Django: 51 MB / 24 s instead of 8 KB / 40 ms), and with a blob:none clone a full bundle would lazily download every historical blob. Above `MAX_BUNDLE_BYTES` (50 MB) the wip is rebuilt from tracked files only (`git add -u`), with a warning, so large untracked output is then not checkpointed.
+- **Prepare/resume** (`Repo.prepare`; the agent runs it before the first turn of an assignment on a VM). A present `.git` is used as is (`present`). With no `cloneUrl`, an empty directory is created (`empty`). Otherwise the agent runs `git clone --filter=blob:none --branch <defaultBranch>` into `repo.partial` and renames it into place (`cloned`). If `repo.bundle` exists (`resumed`), the agent:
+  1. runs `git bundle verify`;
+  2. fetches `refs/heads/*` and `refs/dshsa/*` from the bundle;
+  3. checks out the recorded branch, or detaches at the recorded head;
+  4. runs `read-tree -m -u HEAD refs/dshsa/wip` to restore the work tree (modified, deleted and untracked files);
+  5. runs `read-tree <index>` to restore the staged state.
+
+  There is no `fetch origin` afterwards, because the clone is seconds old. If a force-push on origin dropped the bundle's prerequisite commits, `bundle verify` fails and the restore fails closed. A failed prepare reports `failed` and `turn.ended` (`error:repo_prepare_failed`), and it is retried on the next nudge. A turn never runs without a working copy.
 - Pushing to GitHub (the PR branch) is still the real durability path for finished work; the bundle covers unpushed WIP between microVMs.
 - Export from S3 Files to S3 objects lags (61.8 s measured). The panel transcript is therefore near-real-time (~1 min), and the UI says so.
 
@@ -190,11 +201,11 @@ There is no sync code for anything under `/mnt/work`: it is an NFS mount of the 
 | `.dshsa/inbox.jsonl` | gateway (`Store.append` on `start`/`deliver`, under `flock` on `inbox.lock`) | Append + `fsync`, deduplicated by input id | Before `deliver` returns `accepted` | the agent (`unread`) |
 | `.dshsa/config.json` | gateway (`save_config` on `start`/`deliver`) | Write `*.tmp` → `fsync` → `os.replace` | On write | the agent (`sdk_runner`, `nudge`) |
 | `.dshsa/state.json` | agent (`mark_read` adds the read input ids; `update_state` sets turn start/end and `clean`), under the same lock | Write `*.tmp` → `fsync` → `os.replace` | On write | gateway and agent |
-| `repo.bundle` | agent (`Repo.checkpoint`) | Built on local disk, copied in one sequential write to `repo.bundle.tmp` → `fsync` → `os.replace` → directory `fsync` | At turn end (before `turn.ended`) and on gateway SIGTERM (`/checkpoint`, 25 s budget) | `Repo.prepare` on a fresh VM |
+| `repo.bundle` | agent (`Repo.checkpoint`) | Built on local disk, copied in one sequential write to `repo.bundle.tmp` → `fsync` → `os.replace` → directory `fsync` | At turn end (before `turn.ended`) and on gateway SIGTERM (`/checkpoint`, 25 s budget); skipped when the fingerprint is unchanged | `Repo.prepare` on a fresh VM |
 | `/home/agent/work/repo` | agent, git | Local disk | Never on its own; only through `repo.bundle` and pushes to GitHub | — |
 
 - **Claude session id and resume.** The SDK session id is derived, never stored: `sdk_session_id(ticketKey) = uuid5(ns, "dshsa/" + ticketKey)`. Before each turn, `sdk_runner` checks whether `projects/*/<id>.jsonl` exists (`Worker.session_exists`). If it does, the SDK gets `resume=<id>`; otherwise it gets `session_id=<id>`. A fresh microVM on the same runtimeSessionId mounts the same AP, so the CLI resumes from the same file (spike S2).
-- **Loss window.** If a microVM dies mid-turn, the transcript, inbox and state keep everything up to the last line written. What is lost is the working-copy change made since the last checkpoint, which normally means the current turn's uncommitted edits.
+- **Loss window.** If a microVM dies mid-turn, the transcript, inbox and state keep everything up to the last line written. What is lost is the working-copy change made since the last checkpoint, which normally means the current turn's uncommitted edits. Some files are never in a checkpoint: files matched by `.gitignore` (dependencies, build caches), which a fresh VM rebuilds, and untracked files when the bundle would exceed 50 MB.
 - **Panel transcript.** S3 Files exports the AP tree to `dshsa-data` at `tenants/<tenantId>/<cellId>/<ticketKey>/.claude/projects/` (~60 s lag). `packages/control-api/src/transcript.ts` lists that prefix, picks the newest `.jsonl` and reads its tail with a ranged GET.
 
 #### Alternative evaluated: AgentCore session context keys (2026-11-03, not adopted)
@@ -288,3 +299,7 @@ Each produces `spikes/S<n>-*.md` with numbers and a recommendation. A result tha
 - **Not contract (2026-11-03, docs only)**: §4.10 documents how each worker file reaches durable storage and the Claude
   transcript resume path. It also records why AgentCore session context keys (`aws:AgentCoreRuntimeSourceSid`) were
   evaluated and not adopted. No code change.
+- **Not contract (2026-11-10, docs only)**: §4.10 checkpoint and resume text now matches `worker/container/repo.py`. The bundle
+  refs are `--branches --glob=refs/dshsa/* --not --remotes=origin --tags`, not `--all`. The snapshot uses a temporary index plus
+  `commit-tree`, not `git stash create`. There is no `fetch origin` after a restore. Also documented: the 50 MB tracked-only
+  fallback, the unchanged-fingerprint skip, and prepare-failure retry. No code change.

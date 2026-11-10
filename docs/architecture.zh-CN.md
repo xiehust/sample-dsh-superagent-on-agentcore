@@ -165,9 +165,51 @@ CloudFront（OAC）托管的 React SPA，Cognito 托管 UI 登录。panel-api �
 
 ### 5.3 检查点与恢复
 
-- **检查点**：每轮结束（以及 gateway 收到 SIGTERM 时），agent 把未提交改动写入 `refs/dshsa/wip`（不动当前分支），生成只含 GitHub 尚无内容的增量 bundle，`fsync` 后原子替换 `repo.bundle`，再上报 `turn.ended`。
-- **恢复**：同一 `runtimeSessionId` 在新 microVM 上启动时，挂载同一个 AP → 从 GitHub `--filter=blob:none` 部分克隆 → 应用 bundle → 恢复工作区和索引。Claude 会话 id 由 `uuid5(ns, "dshsa/" + ticketKey)` 推导，存在记录就 `resume`。若远端强推导致 bundle 的前置提交丢失，恢复失败并上报 `failed`（fail closed）。
-- **丢失窗口**：只丢失上次检查点之后尚未提交的工作区改动，通常就是当前这一轮的编辑。真正的持久化路径仍是推送到 GitHub 的 PR 分支。
+工作副本平时只在本地盘上，不做任何同步。它跨 microVM 的唯一备份是 AP 上的 `repo.bundle`。已完成的工作靠推送到 GitHub 的 PR 分支持久化，bundle 只负责在 VM 之间保住尚未推送的半成品。实现在 `worker/container/repo.py`。
+
+**检查点（`Repo.checkpoint`）**
+
+- **时机**：
+  - 每轮结束时：在上报之后、`os.sync()` 和 `turn.ended` 之前，因为宿主随后可能停掉 VM。
+  - gateway 收到 SIGTERM 时（会话停止、VM 回收）：经 agent 的 `/checkpoint` 再做一次，限时 25 秒，之后 `os.sync()` 限时 10 秒。
+- **步骤**：
+  1. **快照**：不动当前分支、索引和工作区。
+     - `refs/dshsa/wip-index`：当前索引（暂存状态）做成的提交，父提交为 HEAD。
+     - `refs/dshsa/wip`：用临时索引对整个工作区 `git add -A` 后生成的提交，包含未被忽略的未跟踪文件；提交信息记下当前分支、HEAD 和 index 提交。
+     - 临时索引从真实索引复制而来，可复用 stat 缓存，只重新哈希改动过的文件。
+  2. **未变化则跳过**：对 HEAD、分支、两棵树和全部本地分支计算指纹。与上次相同且 bundle 已存在时，什么也不写。
+  3. **生成增量 bundle**：引用集为 `--branches --glob=refs/dshsa/* --not --remotes=origin --tags`，只含 GitHub 上还没有的内容（本地提交、本地分支、`wip`、`wip-index`）。不用 `--all` 的原因：
+     - `--all` 会把 origin 分支到不了的 tag 历史也打进去：Django 上是 51 MB / 24 秒，对比增量的 8 KB / 40 毫秒。
+     - 首次克隆是 `blob:none`，完整 bundle 会触发按需下载全部历史 blob。
+  4. **原子写入**：
+     - 先在本地盘生成 bundle，再一次性顺序复制到 `repo.bundle.tmp`。git 自身的写入模式在 S3 Files 上很慢。
+     - 然后 `fsync` → `os.replace` → 目录 `fsync` → `sync()`。
+     - AP 上因此永远是一个完整的 bundle（旧的或新的），不会是写了一半的。
+- **大小上限**：bundle 超过 50 MB 时退回只打包已跟踪文件，并记警告。大体积的未跟踪产物此时不进检查点。
+- **失败处理**：检查点失败只记日志（`repo_checkpoint`），不让本轮失败。
+
+**恢复（`Repo.prepare`）**：每次分配到 VM 后、跑第一轮之前执行。
+
+| 情况 | 动作 |
+|---|---|
+| 本地已有 `.git`（同一 VM 的后续分配） | 直接使用 |
+| 未配置仓库（无 `cloneUrl`） | 建空目录 |
+| 新 VM，AP 上没有 bundle | 从 GitHub `--filter=blob:none` 部分克隆默认分支 |
+| 新 VM，AP 上有 bundle | 部分克隆 → `git bundle verify` → 从 bundle 取回 `refs/heads/*` 与 `refs/dshsa/*` → 检出记录的分支（无分支则按记录的 HEAD 分离） → `read-tree -m -u HEAD wip` 恢复工作区（修改、删除、未跟踪文件） → `read-tree wip-index` 恢复暂存状态 |
+
+- 恢复后不再 `fetch origin`，因为克隆只是几秒前的事。
+- 若远端强推导致 bundle 的前置提交丢失，`bundle verify` 失败，恢复 fail closed。
+- prepare 失败时上报 `failed` 和 `turn.ended`，下次 nudge 时重试。agent 不会在没有工作副本的情况下跑一轮。
+- Claude 会话 id 由 `uuid5(ns, "dshsa/" + ticketKey)` 推导，存在记录就 `resume`。
+
+**丢失窗口**
+
+- VM 在一轮中途消失时，会话记录、inbox 和 state 都保留到最后写入的那一行。丢的只是上次检查点之后的工作区改动，通常就是当前这一轮的编辑。
+- 被 `.gitignore` 忽略的文件（依赖、构建缓存）从不进检查点，新 VM 上需要重新生成。
+- bundle 超过 50 MB 时，未跟踪文件也不进检查点。
+
+**其他**
+
 - **冷启动优化**：gateway 在监听 :8080 前启动 `pinner.py`，把首次挂载和首轮所需文件（最后是约 313 MB 的 Claude CLI）钉在内存里，使其进入 AgentCore V2 快照；属尽力而为，失败只记警告。
 
 ## 6. 基础设施部署
